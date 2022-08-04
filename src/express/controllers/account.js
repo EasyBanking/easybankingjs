@@ -1,7 +1,9 @@
 const mongodb = require("mongoose");
 const { NotFound, BadRequest } = require("http-errors");
 const { User } = require("../../models/User");
+const notficationEmitter = require("../../helpers/NotficationBuilder");
 const { Account } = require("../../models/Account");
+const { events } = require("./constants");
 const objectId = (id) => new mongodb.Types.ObjectId(id);
 
 module.exports = {
@@ -125,14 +127,25 @@ module.exports = {
           },
         }
       ).orFail(new NotFound());
+
+      notficationEmitter.emit(events.TRANSFER_MONEY_NOTFICATION, {
+        user: sender,
+        amount,
+      });
+
+      notficationEmitter.emit(events.RECEIVE_MONEY_NOTFICATION, {
+        user: receiver,
+        amount,
+      });
     } catch (err) {
       await trans.abortTransaction();
       console.log(err);
     } finally {
       await trans.endSession();
     }
-
-    return true;
+    res.json({
+      message: "successfully transfered money",
+    });
   },
 
   async accountSearch(req, res) {
