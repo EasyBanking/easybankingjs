@@ -19,6 +19,12 @@ const handleTokensJobs = async (job) => {
     await User.findOneAndRemove(new Types.ObjectId(job.data.id));
     logger.info("User cleared from database");
   }
+
+  if (job.name === jobs.DELETE_RESET_PAASSWORD_TOKEN) {
+    await Token.findOneAndRemove(new Types.ObjectId(job.data.id));
+  }
+
+  
 };
 
 const AppWorker = new Worker("AppQueue", handleTokensJobs, {

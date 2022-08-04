@@ -7,8 +7,8 @@ const { AppQueue } = require("../../jobs/app");
 const { jobs } = require("../../helpers/constants");
 const { mailer } = require("../../modules/mailer");
 const { randomBytes } = require("crypto");
-const { existsSync, unlinkSync } = require("fs");
 const mongodb = require("mongoose");
+const jsonwebtoken = require("jsonwebtoken");
 
 module.exports = {
   async register(req, res) {
@@ -95,13 +95,12 @@ module.exports = {
       );
 
       await session.commitTransaction();
-
     } catch (err) {
       console.log(err);
 
       await session.abortTransaction();
 
-      const usr = await User.findById(ids["user"] ).orFail();
+      const usr = await User.findById(ids["user"]).orFail();
 
       await usr.deleteOne();
 
@@ -117,6 +116,151 @@ module.exports = {
         "acitivation link sent to your email , ! link expires after 24 hours",
     });
   },
+
+  async activate(req, res) {
+    const { token } = req.params;
+
+    try {
+      const token_ = await Token.findOne({ token });
+
+      const isExpired = token_?.["expireAt"] < Date.now();
+
+      if (!token_ || isExpired) {
+        throw new Error("Invalid token or maybe expired try another one !");
+      }
+
+      const user = await User.findByIdAndUpdate(token_?.["userId"], {
+        isAcitive: true,
+      });
+
+      if (!user) {
+        throw new Error("Invalid activation token");
+      }
+
+      await token_.remove();
+    } catch (err) {
+      throw new BadRequest("Invalid token or maybe expired try another one !");
+    }
+
+    res.json({
+      message: "User activated successfully",
+    });
+  },
+
+  async login(req, res) {
+    const { username, password, remember } = req.body;
+
+    const user = await User.findOne({ username });
+
+    if (!user) {
+      throw new BadRequest("Invalid username or password");
+    }
+
+    if (!compareSync(password, user?.["password"])) {
+      throw new BadRequest("Invalid username or password");
+    }
+
+    if (!user?.["isAcitive"]) {
+      throw new BadRequest("User is not activated");
+    }
+
+    const token = jsonwebtoken.sign(
+      { id: user._id },
+      process.env["JWT_SECRET"],
+      {
+        expiresIn: remember ? "7d" : "1h",
+      }
+    );
+
+    res.json({
+      message: "User logged in successfully",
+      token,
+    });
+  },
+
+  async forgetPassword(req, res) {
+    const { question, answear, email } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      throw new BadRequest("Invalid email");
+    }
+
+    if (
+      user?.["security"]?.["question"] !== question ||
+      user?.["security"]?.["answer"] !== answear
+    ) {
+      throw new BadRequest("Invalid security question or answer");
+    }
+
+    const token = randomBytes(16).toString("hex");
+
+    const token_ = await Token.create({
+      userId: user._id,
+      token,
+      expireAt: Date.now() + 86400000, // expire after 24 hours
+      type: "passwordReset",
+    });
+
+    await sendPasswordResetToken(token, user.email);
+
+    AppQueue.add(
+      jobs.DELETE_RESET_PAASSWORD_TOKEN,
+      { id: token_._id },
+      { delay: 86400000 } // DELETE RESET PASSWORD TOKEN AFTER 24 HOURS
+    );
+
+    res.json({
+      message:
+        "Password reset link sent to your email, ! link expires after 24 hours",
+    });
+  },
+
+  async resetPassword(req, res) {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    let session = await mongodb.startSession();
+    session.startTransaction();
+
+    try {
+      const token_ = await Token.findOne({ token });
+
+      if (!token_) {
+        throw new BadRequest("Invalid token");
+      }
+
+      const isExpired = token_?.["expireAt"] < Date.now();
+
+      if (isExpired) {
+        throw new BadRequest(
+          "Invalid token or maybe expired try another one !"
+        );
+      }
+
+      const user = await User.findById(token_?.["userId"]);
+
+      if (!user) {
+        throw new BadRequest("Invalid token");
+      }
+
+      user.password = password;
+
+      await user.save();
+
+      await token_.remove();
+    } catch (err) {
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      await session.endSession();
+    }
+
+    res.json({
+      message: "Password reseted successfully",
+    });
+  },
 };
 
 // service here
@@ -125,6 +269,25 @@ const FilterUser = (query) => {
   return User.findOne({
     $and: [query],
   });
+};
+
+const sendPasswordResetToken = async (token, email) => {
+  try {
+    await mailer.send({
+      from: process.env["APP_EMAIL"],
+      to: email,
+      subject: "Reset your password",
+      text: "get the full functionality by reset your password",
+      html: `<p>Hello,</p>
+    <p>Please click on the following link to reset your password:</p>
+    <p><a href="${process.env["APP_URL"]}/api/auth/reset-password/${token}">${process.env["APP_URL"]}/api/auth/reset-password/${token}</a></p>
+    <p>If you did not request this, please ignore this email.</p>
+    <p>Thanks,</p>
+    <p>${process.env["APP_NAME"]}</p>`,
+    });
+  } catch (err) {
+    console.log(err.message, err.response.body);
+  }
 };
 
 const sendActivationMail = async (token, email) => {
