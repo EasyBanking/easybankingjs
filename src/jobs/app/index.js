@@ -24,7 +24,7 @@ const handleTokensJobs = async (job) => {
     await Token.findOneAndRemove(new Types.ObjectId(job.data.id));
   }
 
-  
+
 };
 
 const AppWorker = new Worker("AppQueue", handleTokensJobs, {

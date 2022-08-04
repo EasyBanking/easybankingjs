@@ -4,6 +4,7 @@ const { User } = require("../../models/User");
 const notficationEmitter = require("../../helpers/NotficationBuilder");
 const { Account } = require("../../models/Account");
 const { events } = require("./constants");
+const { Payment } = require("../../models/Payment");
 const objectId = (id) => new mongodb.Types.ObjectId(id);
 
 module.exports = {
@@ -34,6 +35,8 @@ module.exports = {
       await User.findByIdAndUpdate(objectId(userId), {
         account: account._id,
       });
+
+      await session.commitTransaction();
     } catch (err) {
       await session.abortTransaction();
       throw err;
@@ -128,6 +131,8 @@ module.exports = {
         }
       ).orFail(new NotFound());
 
+      await trans.commitTransaction();
+
       notficationEmitter.emit(events.TRANSFER_MONEY_NOTFICATION, {
         user: sender,
         amount,
@@ -184,6 +189,7 @@ module.exports = {
         dateOfBirth,
         addresse,
       });
+      await session.commitTransaction();
     } catch (err) {
       await session.abortTransaction();
       throw err;
@@ -194,6 +200,182 @@ module.exports = {
     res.json({
       message: "account has been updated Successfully.",
     });
+  },
+
+  async pay(req, res) {
+    const { atmPin, accountId, amount } = req.body;
+
+    const trans = await mongodb.startSession();
+    trans.startTransaction();
+    try {
+      if (!(await validatePin(atmPin, accountId))) {
+        throw new BadRequest("pin is not valid");
+      }
+
+      const account = await Account.findById(objectId(accountId)).orFail(
+        new NotFound()
+      );
+
+      if (!account) {
+        throw new BadRequest("Account not found");
+      }
+
+      if (account.status != "active") {
+        throw new BadRequest("Account is not active");
+      }
+
+      if (account.balance < amount) {
+        throw new BadRequest("Insufficient balance");
+      }
+
+      if (account.instantPayMaxAmount < amount) {
+        throw new BadRequest(
+          "Your amount is greater than your instant pay max amount"
+        );
+      }
+
+      const token = randomBytes(8).toString("hex");
+
+      const instantPay = await Payment.create({
+        amount,
+        currency: account.currency,
+        token: token,
+        expireAt: new Date(Date.now() + 1000 * 60 * 60 * 1), // only one hour
+        senderId: accountId,
+      });
+
+      const accountUpdate = await Account.findByIdAndUpdate(
+        objectId(accountId),
+        {
+          $push: {
+            transactions: {
+              amount,
+              type: TransactionsType.INSTANT_PAYMENT,
+              currency: account.currency,
+              status: TransactionStatus.PENDING,
+              datetime: new Date(),
+            },
+          },
+        }
+      ).orFail(new NotFound());
+
+      await trans.commitTransaction();
+
+      notficationEmitter.emit(events.INSTANT_PAY_GENERATION_NOTFICATION, {
+        user: accountId,
+        amount,
+      });
+
+      return { token, expireAt: instantPay.expireAt, id: instantPay._id };
+    } catch (err) {
+      await trans.abortTransaction();
+      throw err;
+    } finally {
+      await trans.endSession();
+    }
+  },
+
+  async readPayment(req, res) {
+    const { token } = req.query;
+    const { atmPin, accountId } = req.body;
+
+    await validatePin(atmPin, receiverId);
+
+    const trans = await mongodb.startSession();
+
+    trans.startTransaction();
+
+    try {
+      const payment = await Payment.findOne({
+        token,
+      })
+        .orFail(new BadRequest("token is not valid"))
+        .exec();
+
+      if (payment?.receivedAt) {
+        throw new BadRequest("payment already received");
+      }
+
+      // if payment is expired
+
+      if (payment.expireAt.getTime() < Date.now()) {
+        throw new BadRequest("Payment is expired");
+      }
+
+      // if sender is have the balance right now
+
+      const sender = await Account.findById(payment.senderId).orFail(
+        new BadRequest("Account not found")
+      );
+
+      if (sender.balance < payment.amount) {
+        throw new BadRequest("Insufficient balance");
+      }
+
+      const receiver = await Account.findById(objectId(receiverId)).orFail(
+        new BadRequest("Account not found")
+      );
+
+      if (receiver.status != "active") {
+        throw new BadRequest("Account is not active");
+      }
+
+      if (sender.currency !== receiver.currency) {
+        throw new BadRequest("Currency mismatch");
+      }
+
+      const senderBalance = sender.balance - payment.amount;
+
+      const senderAccount = await Account.findOneAndUpdate(
+        {
+          _id: objectId(payment.senderId),
+          "transactions.transactionable": payment._id,
+        },
+        {
+          balance: senderBalance,
+          $set: {
+            "transactions.$.status": TransactionStatus.APPROVED,
+          },
+        }
+      ).orFail(new NotFound());
+
+      const receiverAccount = await Account.findByIdAndUpdate(
+        objectId(receiverId),
+        {
+          balance: receiver.balance + payment.amount,
+          $push: {
+            transactions: {
+              amount: payment.amount,
+              type: TransactionsType.RECEIVE,
+              currency: sender.currency,
+              transactionable: senderAccount._id,
+              status: TransactionStatus.APPROVED,
+              datetime: new Date(),
+            },
+          },
+        }
+      );
+
+      payment.status = PaymentStatus.APPROVED;
+      payment.receivedAt = new Date();
+      await payment.save();
+
+      notficationEmitter.emit(events.INSTANT_PAY_RECEVEING_NOTFICATION, {
+        user: receiverAccount,
+        amount,
+      });
+
+      await trans.commitTransaction();
+
+      res.json({
+        message: "payment done successfully.",
+      });
+    } catch (err) {
+      await trans.abortTransaction();
+      throw err;
+    } finally {
+      await trans.endSession();
+    }
   },
 };
 

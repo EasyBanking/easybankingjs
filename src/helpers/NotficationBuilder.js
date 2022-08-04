@@ -9,10 +9,7 @@ emitter.on(events.NOTFICATION, async (data) => {
     new NotFound("User not found")
   );
 
-  if (
-    data.type === events.TRANSFER_MONEY_NOTFICATION ||
-    data.type === events.RECEIVE_MONEY_NOTFICATION
-  ) {
+  if (Object.values(events).includes(data.type)) {
     user.notfications.push({
       content: generateNotficationContent(
         events[data.type],
@@ -33,6 +30,12 @@ function generateNotficationContent(type, { username }) {
 
     case events.RECEIVE_MONEY_NOTFICATION:
       return (amount) => `you have been received ${amount} from ${username} `;
+
+    case events.INSTANT_PAY_GENERATION_NOTFICATION:
+      return (amount) => `you have initalized payment ${amount}`;
+
+    case events.INSTANT_PAY_RECEVEING_NOTFICATION:
+      return (amount) => `you have received payment ${amount}`;
   }
 }
 
