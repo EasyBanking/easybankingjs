@@ -1,5 +1,7 @@
 const { model, Schema, Types } = require("mongoose");
 const bcrypt = require("bcryptjs");
+const fs = require("fs");
+const path = require("path");
 
 const Roles = {
   ADMIN: "SYSTEM_ADMIN",
@@ -19,7 +21,7 @@ const userSecuritySchema = new Schema(
     answer: {
       type: String,
       required: true,
-      minlength: 5,
+      minlength: 2,
       maxlength: 255,
     },
   },
@@ -46,7 +48,7 @@ const UserSchema = new Schema(
       type: String,
       required: true,
       minlength: 4,
-      maxlength: 20,
+      maxlength: 64,
     },
     role: {
       type: String,
@@ -81,6 +83,14 @@ UserSchema.pre("save", function (next) {
     this.password = bcrypt.hashSync(this.password);
   }
   next();
+});
+
+UserSchema.post("deleteOne", { document: true }, function () {
+  const profileImgPath = path.join(process.cwd(), this.profileImg);
+
+  if (fs.existsSync(profileImgPath)) {
+    fs.unlinkSync(profileImgPath);
+  }
 });
 
 const User = model("User", UserSchema);

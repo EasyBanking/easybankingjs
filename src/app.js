@@ -17,7 +17,7 @@ async function main() {
 
   const io = wrapSocketIo(srv);
 
-  const mongoConnection = await mongodb.createConnection();
+  const mongoConnection = mongodb();
 
   const redisConnection = redis.createConnection();
 
