@@ -11,7 +11,10 @@ if (process.env.NODE_ENV === "development") {
   config({ path: join(process.cwd(), `${process.env.NODE_ENV}.env`) });
 }
 
+
+// seeders array here 
 const seeders = [LoctionSeeder];
+
 
 async function main() {
   const con = await mongo();

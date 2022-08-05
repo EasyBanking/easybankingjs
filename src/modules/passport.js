@@ -6,7 +6,7 @@ const auth = passport;
 
 const options = {
   secretOrKey: process.env["JWT_SECRET"],
-  jwtFromRequest: jwt.ExtractJwt.fromHeader(process.env["JWT_TOKEN_HEADER"]),
+  jwtFromRequest: jwt.ExtractJwt.fromAuthHeaderAsBearerToken(),
 };
 
 const authCb = async (payload, done) => {
@@ -14,6 +14,7 @@ const authCb = async (payload, done) => {
     const user = await User.findOne({ id: payload?.id }).orFail();
     return done(null, user);
   } catch (er) {
+    console.log(er)
     done(er, false);
   }
 };

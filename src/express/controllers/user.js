@@ -291,8 +291,10 @@ module.exports = {
         throw BadRequest(`${msg} is exist try another one`);
       }
 
-      usr.question = question;
-      usr.answear = answear;
+      usr.username = username;
+      usr.email = usr.email;
+      usr.security.question = question;
+      usr.security.answer = answear;
 
       if (password) {
         usr.password = password;
@@ -366,7 +368,7 @@ module.exports = {
     }
   },
 
-  async disable(req,res){
+  async disable(req, res) {
     const { password } = req.body;
 
     let session = await mongodb.startSession();
@@ -383,7 +385,7 @@ module.exports = {
 
       usr.isAcitive = false;
 
-      await usr.save()
+      await usr.save();
 
       await session.commitTransaction();
 
@@ -396,7 +398,7 @@ module.exports = {
     } finally {
       await session.endSession();
     }
-  }
+  },
 };
 
 // service here
