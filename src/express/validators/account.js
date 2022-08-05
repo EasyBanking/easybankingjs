@@ -23,7 +23,7 @@ const updateAccount = {
     dateOfBirth: Joi.string().min(2).max(55).required(),
     addresse: Joi.string().min(2).max(55).required(),
   }),
- /* params:{
+  /* params:{
     otp:""
   }*/
 };
@@ -39,4 +39,27 @@ const createAccount = {
   }),
 };
 
-module.exports = { transferMoney, search, updateAccount, createAccount };
+const pay = {
+  body: Joi.object({
+    atmPin: Joi.string().length(4).required(),
+    amount: Joi.number().required(),
+  }),
+};
+
+const readPayment = {
+  body: Joi.object({
+    atmPin: Joi.string().length(4).required(),
+  }),
+  params: {
+    token: Joi.string().length(16).required(),
+  },
+};
+
+module.exports = {
+  pay,
+  readPayment,
+  transferMoney,
+  search,
+  updateAccount,
+  createAccount,
+};

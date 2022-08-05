@@ -99,7 +99,6 @@ module.exports = {
 
       await session.commitTransaction();
     } catch (err) {
-      console.log(err);
 
       await session.abortTransaction();
 
@@ -330,7 +329,6 @@ module.exports = {
         message: "user has been updated Succesfully",
       });
     } catch (err) {
-      console.log(err);
       await session.abortTransaction();
       throw err;
     } finally {

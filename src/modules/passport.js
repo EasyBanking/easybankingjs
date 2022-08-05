@@ -14,7 +14,6 @@ const authCb = async (payload, done) => {
     const user = await User.findOne({ id: payload?.id }).orFail();
     return done(null, user);
   } catch (er) {
-    console.log(er)
     done(er, false);
   }
 };

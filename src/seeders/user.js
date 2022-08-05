@@ -23,7 +23,7 @@ async function seed() {
   for (let i = 0; i < len; i++) {
     let account = await createAccount();
     users.push({
-      username: faker.randUserName(),
+      username: faker.randUserName().substring(0,19).trim(),
       email: faker.randEmail(),
       password: hashSync("password"),
       security: {

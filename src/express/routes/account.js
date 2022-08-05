@@ -33,4 +33,20 @@ module.exports = (router) => {
     celebrate(validator.search),
     controller.accountSearch
   );
+
+  router.post(
+    "/account/pay",
+    authenticate(),
+    celebrate(validator.pay),
+    controller.pay
+  );
+
+  router.post(
+    "/account/read-pay/:token",
+    authenticate(),
+    celebrate(validator.readPayment),
+    controller.readPayment
+  );
+
+
 };

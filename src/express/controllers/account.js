@@ -4,13 +4,14 @@ const { User } = require("../../models/User");
 const notficationEmitter = require("../../helpers/NotficationBuilder");
 const { Account } = require("../../models/Account");
 const { events } = require("../../helpers/constants");
-const { Payment } = require("../../models/Payment");
+const { Payment, PaymentStatus } = require("../../models/Payment");
 const {
   Transaction,
   TransactionsType,
   TransactionStatus,
 } = require("../../models/Transaction");
 const objectId = (id) => new mongodb.Types.ObjectId(id);
+const { randomBytes } = require("crypto");
 const { compareSync, hashSync } = require("bcryptjs");
 
 module.exports = {
@@ -189,22 +190,18 @@ module.exports = {
   },
 
   async pay(req, res) {
-    const { atmPin, accountId, amount } = req.body;
+    const { atmPin, amount } = req.body;
 
     const trans = await mongodb.startSession();
     trans.startTransaction();
     try {
-      if (!(await validatePin(atmPin, accountId))) {
+      if (!(await validatePin(atmPin, req.user.account))) {
         throw new BadRequest("pin is not valid");
       }
 
-      const account = await Account.findById(objectId(accountId)).orFail(
-        new NotFound()
+      const account = await Account.findById(objectId(req.user.account)).orFail(
+        new NotFound("Account not found")
       );
-
-      if (!account) {
-        throw new BadRequest("Account not found");
-      }
 
       if (account.status != "active") {
         throw new BadRequest("Account is not active");
@@ -214,33 +211,29 @@ module.exports = {
         throw new BadRequest("Insufficient balance");
       }
 
-      if (account.instantPayMaxAmount < amount) {
-        throw new BadRequest(
-          "Your amount is greater than your instant pay max amount"
-        );
-      }
-
       const token = randomBytes(8).toString("hex");
+
+      const transaction_ = await Transaction.create({
+        amount,
+        type: TransactionsType.TRANSFER,
+        status: TransactionStatus.PENDING,
+        datetime: new Date(),
+        sender: account,
+      });
 
       const instantPay = await Payment.create({
         amount,
-        currency: account.currency,
         token: token,
         expireAt: new Date(Date.now() + 1000 * 60 * 60 * 1), // only one hour
-        senderId: accountId,
+        sender: req.user.account,
+        transaction: transaction_._id,
       });
 
       const accountUpdate = await Account.findByIdAndUpdate(
-        objectId(accountId),
+        objectId(req.user.account),
         {
           $push: {
-            transactions: {
-              amount,
-              type: TransactionsType.INSTANT_PAYMENT,
-              currency: account.currency,
-              status: TransactionStatus.PENDING,
-              datetime: new Date(),
-            },
+            transactions: transaction_._id,
           },
         }
       ).orFail(new NotFound());
@@ -248,11 +241,11 @@ module.exports = {
       await trans.commitTransaction();
 
       notficationEmitter.emit(events.INSTANT_PAY_GENERATION_NOTFICATION, {
-        user: accountId,
+        user: req.user.account,
         amount,
       });
 
-      return { token, expireAt: instantPay.expireAt, id: instantPay._id };
+      res.json({ token, expireAt: instantPay.expireAt, id: instantPay._id });
     } catch (err) {
       await trans.abortTransaction();
       throw err;
@@ -262,16 +255,17 @@ module.exports = {
   },
 
   async readPayment(req, res) {
-    const { token } = req.query;
-    const { atmPin, accountId } = req.body;
-
-    await validatePin(atmPin, receiverId);
+    const { token } = req.params;
+    const { atmPin } = req.body;
 
     const trans = await mongodb.startSession();
 
     trans.startTransaction();
 
     try {
+      await validatePin(atmPin, req.user.account);
+
+      // shoudl contains a transactionId
       const payment = await Payment.findOne({
         token,
       })
@@ -290,7 +284,7 @@ module.exports = {
 
       // if sender is have the balance right now
 
-      const sender = await Account.findById(payment.senderId).orFail(
+      const sender = await Account.findById(payment.sender).orFail(
         new BadRequest("Account not found")
       );
 
@@ -298,9 +292,9 @@ module.exports = {
         throw new BadRequest("Insufficient balance");
       }
 
-      const receiver = await Account.findById(objectId(receiverId)).orFail(
-        new BadRequest("Account not found")
-      );
+      const receiver = await Account.findById(
+        objectId(req.user.account)
+      ).orFail(new BadRequest("Account not found"));
 
       if (receiver.status != "active") {
         throw new BadRequest("Account is not active");
@@ -314,31 +308,26 @@ module.exports = {
 
       const senderAccount = await Account.findOneAndUpdate(
         {
-          _id: objectId(payment.senderId),
-          "transactions.transactionable": payment._id,
+          _id: objectId(payment.sender),
         },
         {
           balance: senderBalance,
-          $set: {
-            "transactions.$.status": TransactionStatus.APPROVED,
-          },
         }
-      ).orFail(new NotFound());
+      );
+
+      const transaction_ = await Transaction.findOneAndUpdate(
+        {
+          id: payment.transaction,
+        },
+        {
+          status: TransactionStatus.APPROVED,
+        }
+      ).orFail(new NotFound("transaction is not valid"));
 
       const receiverAccount = await Account.findByIdAndUpdate(
-        objectId(receiverId),
+        objectId(req.user.account),
         {
           balance: receiver.balance + payment.amount,
-          $push: {
-            transactions: {
-              amount: payment.amount,
-              type: TransactionsType.RECEIVE,
-              currency: sender.currency,
-              transactionable: senderAccount._id,
-              status: TransactionStatus.APPROVED,
-              datetime: new Date(),
-            },
-          },
         }
       );
 
@@ -348,7 +337,7 @@ module.exports = {
 
       notficationEmitter.emit(events.INSTANT_PAY_RECEVEING_NOTFICATION, {
         user: receiverAccount,
-        amount,
+        amount: payment.amount,
       });
 
       await trans.commitTransaction();

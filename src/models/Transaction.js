@@ -46,7 +46,7 @@ const TransactionSchema = new Schema(
 
     receiver: {
       type: Types.ObjectId,
-      required: true,
+      required: false,
       ref: "Account",
     },
   },

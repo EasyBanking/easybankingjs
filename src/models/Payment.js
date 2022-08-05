@@ -38,17 +38,22 @@ const PaymentSchema = new Schema(
       type: Date,
       default: null,
     },
-    senderId: {
+    sender: {
       type: Schema.Types.ObjectId,
       ref: "Account",
       required: true,
       index: true,
     },
-    receiverId: {
+    receiver: {
       type: Schema.Types.ObjectId,
       ref: "Account",
       index: true,
       default: null,
+    },
+    transaction: {
+      type: Schema.Types.ObjectId,
+      required: true,
+      ref: "Transaction",
     },
   },
   { versionKey: false }
