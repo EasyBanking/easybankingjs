@@ -352,6 +352,81 @@ module.exports = {
       await trans.endSession();
     }
   },
+
+  async getAll(req, res) {
+    res.json({
+      data: await Account.find(),
+    });
+  },
+
+  async find(req, res) {
+    const { id } = req.params;
+
+    res.json({
+      data: await Account.findOne({
+        _id: objectId(id),
+      }),
+    });
+  },
+
+  async delete(req, res) {
+    const { id } = req.params;
+    res.json({
+      data: await Account.findByIdAndDelete(objectId(id)).orFail(
+        new NotFound("account not found")
+      ),
+    });
+  },
+
+  async alter(req, res) {
+    const { id } = req.params;
+    const {
+      firstName,
+      lastName,
+      dateOfBirth,
+      addresse,
+      atmPin,
+      nationalId,
+      balance,
+      status,
+    } = req.body;
+
+    const trans = await mongodb.startSession();
+
+    trans.startTransaction();
+
+    try {
+      const updated = await Account.findOne({
+        _id: objectId(id),
+      });
+
+      if (!compareSync(atmPin, updated.atmPin)) {
+        updated.atmPin = atmPin;
+      }
+
+      updated.firstName = firstName;
+      updated.lastName = lastName;
+      updated.dateOfBirth = dateOfBirth;
+      updated.addresse = addresse;
+      updated.nationalId = nationalId;
+      updated.status = status;
+      updated.balance = balance;
+
+      await updated.save();
+
+      await trans.commitTransaction();
+
+      res.json({
+        message: "account has been updated successfully",
+        data: updated,
+      });
+    } catch (err) {
+      await trans.abortTransaction();
+      throw err;
+    } finally {
+      await trans.endSession();
+    }
+  },
 };
 
 const validatePin = async (pin, accountId) => {

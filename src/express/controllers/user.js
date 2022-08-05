@@ -12,6 +12,7 @@ const jsonwebtoken = require("jsonwebtoken");
 const { compareSync } = require("bcryptjs");
 const { unlinkSync } = require("fs");
 const { join } = require("path");
+const objectId = (id) => new mongodb.Types.ObjectId(id);
 
 module.exports = {
   async register(req, res) {
@@ -99,7 +100,6 @@ module.exports = {
 
       await session.commitTransaction();
     } catch (err) {
-
       await session.abortTransaction();
 
       const usr = await User.findById(ids["user"]).orFail();
@@ -390,6 +390,113 @@ module.exports = {
       res.json({
         message: "sucssefully disabled user account",
       });
+    } catch (err) {
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      await session.endSession();
+    }
+  },
+
+  async getAll(req, res) {
+    res.json({
+      data: await User.find(),
+    });
+  },
+
+  async findOne(req, res) {
+    const { id } = req.params;
+    res.json({
+      data: await User.findOne({
+        _id: id,
+      }).orFail(new NotFound("user not found")),
+    });
+  },
+
+  async delete_admin(req, res) {
+    const { id } = req.params;
+
+    const usr = await User.findOne({
+      _id: objectId(id),
+    });
+
+    await usr.delete();
+
+    res.json({
+      message: "user deleted successfully",
+    });
+  },
+
+  async update_admin(req, res) {
+    const { id } = req.params;
+    const { username, email, password, question, answear, isAcitive } =
+      req.body;
+
+    let imgPath_;
+
+    let session = await mongodb.startSession();
+    session.startTransaction();
+
+    try {
+      const usr = await User.findOne({
+        _id: req.user._id,
+      });
+
+      const isExist = await User.findOne({
+        username,
+        email,
+        _id: {
+          $ne: req.user._id,
+        },
+      });
+
+      if (isExist) {
+        const msg = isExist.username === username ? "username" : "email";
+        throw BadRequest(`${msg} is exist try another one`);
+      }
+
+      usr.username = username;
+      usr.email = usr.email;
+      usr.security.question = question;
+      usr.security.answer = answear;
+      usr.isAcitive = isAcitive;
+
+      if (password) {
+        usr.password = password;
+      }
+
+      const imgPath = (username) =>
+        path.join("uploads", "images", `img-${username}-${Date.now()}.webp`);
+
+      if (req.file) {
+        // handle profile image
+        if (usr.profileImg) {
+          unlinkSync(join(process.cwd(), usr.profileImg));
+        }
+
+        imgPath_ = imgPath(usr.username);
+
+        await sharp(req.file.buffer)
+          .resize(150, 150)
+          .toFormat("webp")
+          .toFile(imgPath_);
+
+        usr.profileImg = imgPath_;
+      }
+
+      await usr.save();
+
+      await session.commitTransaction();
+
+      const usr_ = usr.toObject()
+
+      delete usr_["password"];
+
+      res.json({
+        data: usr_,
+        message: "user has been updated Succesfully",
+      });
+      
     } catch (err) {
       await session.abortTransaction();
       throw err;

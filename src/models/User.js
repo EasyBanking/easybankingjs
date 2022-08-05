@@ -2,11 +2,12 @@ const { model, Schema, Types } = require("mongoose");
 const bcrypt = require("bcryptjs");
 const fs = require("fs");
 const path = require("path");
+const { notficationSchema } = require("./Notfication");
 
 const Roles = {
-  ADMIN: "SYSTEM_ADMIN",
+  ADMIN: "ADMIN",
   USER: "USER",
-  CS: "CUSTOMER_SERVICE",
+  CS: "SERVICE",
   SALES: "SALES",
 };
 
@@ -66,9 +67,8 @@ const UserSchema = new Schema(
       default: false,
     },
     notfications: {
-      type: [Types.ObjectId],
+      type: [notficationSchema],
       default: [],
-      ref: "Notfication",
     },
     account: {
       type: Schema.Types.ObjectId,

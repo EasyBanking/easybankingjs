@@ -55,7 +55,31 @@ const readPayment = {
   },
 };
 
+const objectId = {
+  params: Joi.object({
+    id: Joi.string().length(24),
+  }),
+};
+
+const update_admin = {
+  body: Joi.object({
+    atmPin: Joi.string().length(4).required(),
+    firstName: Joi.string().min(2).max(55).required(),
+    lastName: Joi.string().min(2).max(55).required(),
+    nationalId: Joi.string().min(2).max(55).required(),
+    dateOfBirth: Joi.string().min(2).max(55).required(),
+    addresse: Joi.string().min(2).max(55).required(),
+    balance: Joi.number().required(),
+    status: Joi.string(),
+  }),
+  params: Joi.object({
+    id: Joi.string().length(24),
+  }),
+};
+
 module.exports = {
+  update_admin,
+  objectId,
   pay,
   readPayment,
   transferMoney,
