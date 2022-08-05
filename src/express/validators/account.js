@@ -2,7 +2,6 @@ const { Joi } = require("celebrate");
 
 const transferMoney = {
   body: Joi.object({
-    senderId: Joi.string().length(24).required(),
     receiverId: Joi.string().length(24).required(),
     amount: Joi.number().required(),
     atmPin: Joi.string().length(4).required(),
@@ -24,9 +23,9 @@ const updateAccount = {
     dateOfBirth: Joi.string().min(2).max(55).required(),
     addresse: Joi.string().min(2).max(55).required(),
   }),
-  params: Joi.object({
-    accountId: Joi.string().length(24).required(),
-  }),
+ /* params:{
+    otp:""
+  }*/
 };
 
 const createAccount = {
@@ -37,9 +36,6 @@ const createAccount = {
     nationalId: Joi.string().min(2).max(55).required(),
     dateOfBirth: Joi.string().min(2).max(55).required(),
     addresse: Joi.string().min(2).max(55).required(),
-  }),
-  params: Joi.object({
-    userId: Joi.string().length(24).required(),
   }),
 };
 

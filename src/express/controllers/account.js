@@ -5,19 +5,18 @@ const notficationEmitter = require("../../helpers/NotficationBuilder");
 const { Account } = require("../../models/Account");
 const { events } = require("../../helpers/constants");
 const { Payment } = require("../../models/Payment");
+const {
+  Transaction,
+  TransactionsType,
+  TransactionStatus,
+} = require("../../models/Transaction");
 const objectId = (id) => new mongodb.Types.ObjectId(id);
+const { compareSync, hashSync } = require("bcryptjs");
 
 module.exports = {
   async createAccount(req, res) {
-    const {
-      firstName,
-      lastName,
-      dateOfBirth,
-      addresse,
-      atmPin,
-      nationalId,
-      userId,
-    } = req.body;
+    const { firstName, lastName, dateOfBirth, addresse, atmPin, nationalId } =
+      req.body;
 
     let session = await mongodb.startSession();
     session.startTransaction();
@@ -32,7 +31,7 @@ module.exports = {
         addresse,
       });
 
-      await User.findByIdAndUpdate(objectId(userId), {
+      await User.findByIdAndUpdate(req.user._id, {
         account: account._id,
       });
 
@@ -51,23 +50,19 @@ module.exports = {
   },
 
   async transferMoney(req, res) {
-    const { amount, senderId, receiverId, currency, atmPin } = req.body;
+    const { amount, receiverId, atmPin } = req.body;
 
     const trans = await mongodb.startSession();
 
     trans.startTransaction();
 
     try {
-      const sender = await Account.findById(objectId(senderId)).orFail(
-        new NotFound()
+      const sender = await Account.findById(objectId(req.user.account)).orFail(
+        new NotFound("Sender account not found")
       );
 
-      if (!(await validatePin(atmPin, senderId))) {
+      if (!(await validatePin(atmPin, sender.id))) {
         throw new BadRequest("pin is not valid");
-      }
-
-      if (!sender) {
-        throw new BadRequest("Sender account not found");
       }
 
       if (sender.balance < amount) {
@@ -79,12 +74,8 @@ module.exports = {
       }
 
       const receiver = await Account.findById(objectId(receiverId)).orFail(
-        new NotFound()
+        new NotFound("receiver is not round")
       );
-
-      if (!receiver) {
-        throw new BadRequest("Receiver account not found");
-      }
 
       if (sender.currency !== receiver.currency) {
         throw new BadRequest("Currency mismatch");
@@ -97,20 +88,19 @@ module.exports = {
       const senderBalance = sender.balance - amount;
       const receiverBalance = receiver.balance + amount;
 
+      const transaction_ = await Transaction.create({
+        amount,
+        type: TransactionsType.TRANSFER,
+        sender: req.user._id,
+        receiver: receiver._id,
+        status: TransactionStatus.APPROVED,
+        datetime: new Date(),
+      });
       const senderAccount = await Account.findByIdAndUpdate(
-        objectId(senderId),
+        objectId(sender.id),
         {
           balance: senderBalance,
-          $push: {
-            transactions: {
-              amount,
-              type: TransactionsType.TRANSFER,
-              currency: currency,
-              transactionable: objectId(senderId),
-              status: TransactionStatus.APPROVED,
-              datetime: new Date(),
-            },
-          },
+          $push: transaction_._id,
         }
       ).orFail(new NotFound());
 
@@ -118,16 +108,6 @@ module.exports = {
         objectId(receiverId),
         {
           balance: receiverBalance,
-          $push: {
-            transactions: {
-              amount,
-              type: TransactionsType.RECEIVE,
-              currency: currency,
-              transactionable: objectId(receiverId),
-              status: TransactionStatus.APPROVED,
-              datetime: new Date(),
-            },
-          },
         }
       ).orFail(new NotFound());
 
@@ -145,6 +125,7 @@ module.exports = {
     } catch (err) {
       await trans.abortTransaction();
       console.log(err);
+      throw err;
     } finally {
       await trans.endSession();
     }
@@ -175,20 +156,25 @@ module.exports = {
     const { firstName, lastName, dateOfBirth, addresse, atmPin, nationalId } =
       req.body;
 
-    const { accountId } = req.params;
-
     let session = await mongodb.startSession();
     session.startTransaction();
 
     try {
-      const account = await Account.findOneAndUpdate(accountId, {
-        atmPin,
-        firstName,
-        lastName,
-        nationalId,
-        dateOfBirth,
-        addresse,
-      });
+      const account = await Account.findOne({ id: req.user.account }).orFail(
+        new NotFound("account not found to update !")
+      );
+
+      if (!compareSync(atmPin, account.atmPin)) {
+        account.atmPin = hashSync(atmPin);
+      }
+
+      account.firstName = firstName;
+      account.lastName = lastName;
+      account.nationalId = nationalId;
+      account.dateOfBirth = dateOfBirth;
+      account.addresse = addresse;
+
+      await account.save();
       await session.commitTransaction();
     } catch (err) {
       await session.abortTransaction();

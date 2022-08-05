@@ -1,5 +1,4 @@
 const { Schema, model } = require("mongoose");
-const { TransactionSchema } = require("./Transaction");
 const bcrypt = require("bcryptjs");
 const { UrgentSchema } = require("./Urgent");
 
@@ -50,12 +49,6 @@ const AccountSchema = new Schema(
     atmPin: {
       type: String,
       required: true,
-      minlength: 4,
-      maxlength: 4,
-    },
-    transactions: {
-      type: [TransactionSchema],
-      default: [],
     },
     urgents: {
       type: [UrgentSchema],

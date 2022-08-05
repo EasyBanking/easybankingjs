@@ -8,6 +8,7 @@ const authenticate = require("../middlewares/Auth");
 module.exports = (router) => {
   router.post(
     "/account/create",
+    authenticate(),
     celebrate(validator.createAccount),
     controller.createAccount
   );
@@ -29,7 +30,7 @@ module.exports = (router) => {
   router.get(
     "/account/search",
     authenticate(),
-    celebrate(validator.updateAccount),
+    celebrate(validator.search),
     controller.accountSearch
   );
 };

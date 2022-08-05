@@ -17,8 +17,6 @@ async function seed() {
 }
 
 // just name of the seeder
-seed.label = 'Location Seeder';
-
+seed.label = "Location Seeder";
 
 module.exports = seed;
-

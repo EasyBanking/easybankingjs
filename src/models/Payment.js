@@ -40,13 +40,13 @@ const PaymentSchema = new Schema(
     },
     senderId: {
       type: Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Account",
       required: true,
       index: true,
     },
     receiverId: {
       type: Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Account",
       index: true,
       default: null,
     },

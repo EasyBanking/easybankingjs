@@ -7,7 +7,8 @@
     "test": "jest",
     "dev": "env-cmd -e development nodemon --config nodemon.json src/app.js",
     "start": "env-cmd -e production node src/app.js",
-    "seed": "env-cmd -e development node src/seeders/index.js"
+    "db:seed": "env-cmd -e development node src/seeders/index.js",
+    "db:clear": "env-cmd -e development node src/commands/reset-db.js"
   },
   "keywords": [],
   "author": "",

@@ -6,15 +6,14 @@ const mongo = require("../modules/mongodb");
 // seeders
 
 const LoctionSeeder = require("./location");
+const UsersSeeder = require("./user");
 
 if (process.env.NODE_ENV === "development") {
   config({ path: join(process.cwd(), `${process.env.NODE_ENV}.env`) });
 }
 
-
-// seeders array here 
-const seeders = [LoctionSeeder];
-
+// seeders array here
+const seeders = [LoctionSeeder, UsersSeeder];
 
 async function main() {
   const con = await mongo();

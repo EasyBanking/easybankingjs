@@ -1,4 +1,4 @@
-const { Schema } = require("mongoose");
+const { Schema, Types, model } = require("mongoose");
 
 const TransactionStatus = {
   PENDING: "PENDING",
@@ -37,12 +37,27 @@ const TransactionSchema = new Schema(
       type: Number,
       required: true,
     },
-    transactionable: {
-      type: Schema.Types.ObjectId,
+
+    sender: {
+      type: Types.ObjectId,
+      required: true,
+      ref: "Account",
+    },
+
+    receiver: {
+      type: Types.ObjectId,
+      required: true,
       ref: "Account",
     },
   },
   { versionKey: false }
 );
 
-module.exports = { TransactionSchema };
+const Transaction = model("Transaction", TransactionSchema);
+
+module.exports = {
+  TransactionSchema,
+  Transaction,
+  TransactionsType,
+  TransactionStatus,
+};
