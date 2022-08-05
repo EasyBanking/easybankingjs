@@ -1,6 +1,6 @@
 const { EventEmitter } = require("events");
 const { events } = require("./constants");
-const { User } = require("../../models/User");
+const { User } = require("../models/User");
 
 const emitter = new EventEmitter();
 
@@ -39,4 +39,4 @@ function generateNotficationContent(type, { username }) {
   }
 }
 
-module.exports = NotficationsEmitter;
+module.exports = emitter;

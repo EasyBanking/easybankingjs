@@ -1,6 +1,6 @@
 const { User } = require("../../models/User");
 const { Token } = require("../../models/Tokens");
-const { BadRequest, InternalServerError } = require("http-errors");
+const { BadRequest, NotFound, Unauthorized } = require("http-errors");
 const sharp = require("sharp");
 const path = require("path");
 const { AppQueue } = require("../../jobs/app");
@@ -9,6 +9,9 @@ const { mailer } = require("../../modules/mailer");
 const { randomBytes } = require("crypto");
 const mongodb = require("mongoose");
 const jsonwebtoken = require("jsonwebtoken");
+const { compareSync } = require("bcryptjs");
+const { unlinkSync } = require("fs");
+const { join } = require("path");
 
 module.exports = {
   async register(req, res) {
@@ -77,7 +80,7 @@ module.exports = {
       ids["user"] = usr._id;
       ids["token"] = token._id;
 
-      // await sendActivationMail(token.token, usr.email);
+      await sendActivationMail(token.token, usr.email);
       await token.save();
       await usr.save();
 
@@ -188,8 +191,8 @@ module.exports = {
     }
 
     if (
-      user?.["security"]?.["question"] !== question ||
-      user?.["security"]?.["answer"] !== answear
+      user?.["security"]?.["question"] != question ||
+      user?.["security"]?.["answer"] != answear
     ) {
       throw new BadRequest("Invalid security question or answer");
     }
@@ -261,6 +264,139 @@ module.exports = {
       message: "Password reseted successfully",
     });
   },
+
+  async updateUser(req, res) {
+    const { username, email, password, question, answear } = req.body;
+
+    let imgPath_;
+
+    let session = await mongodb.startSession();
+    session.startTransaction();
+
+    try {
+      const usr = await User.findOne({
+        _id: req.user._id,
+      });
+
+      const isExist = await User.findOne({
+        username,
+        email,
+        _id: {
+          $ne: req.user._id,
+        },
+      });
+
+      if (isExist) {
+        const msg = isExist.username === username ? "username" : "email";
+        throw BadRequest(`${msg} is exist try another one`);
+      }
+
+      usr.question = question;
+      usr.answear = answear;
+
+      if (password) {
+        usr.password = password;
+      }
+
+      const imgPath = (username) =>
+        path.join("uploads", "images", `img-${username}-${Date.now()}.webp`);
+
+      if (req.file) {
+        // handle profile image
+        if (usr.profileImg) {
+          unlinkSync(join(process.cwd(), usr.profileImg));
+        }
+
+        imgPath_ = imgPath(usr.username);
+
+        await sharp(req.file.buffer)
+          .resize(150, 150)
+          .toFormat("webp")
+          .toFile(imgPath_);
+
+        usr.profileImg = imgPath_;
+      }
+
+      await usr.save();
+
+      await session.commitTransaction();
+
+      delete usr["password"];
+
+      res.json({
+        data: usr,
+        message: "user has been updated Succesfully",
+      });
+    } catch (err) {
+      console.log(err);
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      await session.endSession();
+    }
+  },
+
+  async delete(req, res) {
+    const { password } = req.body;
+
+    let session = await mongodb.startSession();
+    session.startTransaction();
+
+    try {
+      const usr = await User.findOne({ _id: req.user._id }).orFail(
+        new NotFound()
+      );
+
+      if (!compareSync(password, usr.password)) {
+        throw new Unauthorized("password not valid");
+      }
+
+      await usr.delete();
+
+      await session.commitTransaction();
+
+      res.json({
+        message: "sucssefully deleted user account",
+      });
+    } catch (err) {
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      await session.endSession();
+    }
+  },
+
+  async disable(req,res){
+    const { password } = req.body;
+
+    let session = await mongodb.startSession();
+    session.startTransaction();
+
+    try {
+      const usr = await User.findOne({ _id: req.user._id }).orFail(
+        new NotFound()
+      );
+
+      if (!compareSync(password, usr.password)) {
+        throw new Unauthorized("password not valid");
+      }
+
+      usr.isAcitive = false;
+
+      await usr.save()
+
+      await session.commitTransaction();
+
+      res.json({
+        message: "sucssefully disabled user account",
+      });
+    } catch (err) {
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      await session.endSession();
+    }
+  }
 };
 
 // service here

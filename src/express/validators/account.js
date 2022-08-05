@@ -17,12 +17,12 @@ const search = {
 
 const updateAccount = {
   body: Joi.object({
-    firstName,
-    lastName,
-    dateOfBirth,
-    addresse,
-    atmPin,
-    nationalId,
+    atmPin: Joi.string().length(4).required(),
+    firstName: Joi.string().min(2).max(55).required(),
+    lastName: Joi.string().min(2).max(55).required(),
+    nationalId: Joi.string().min(2).max(55).required(),
+    dateOfBirth: Joi.string().min(2).max(55).required(),
+    addresse: Joi.string().min(2).max(55).required(),
   }),
   params: Joi.object({
     accountId: Joi.string().length(24).required(),

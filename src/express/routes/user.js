@@ -2,6 +2,7 @@ const controller = require("../controllers/user");
 const validator = require("../validators/user");
 const { celebrate } = require("celebrate");
 const { Multer } = require("../../modules/multer");
+const authenticate = require("../middlewares/Auth");
 
 // locations resource router
 
@@ -15,7 +16,7 @@ module.exports = (router) => {
 
   // activate user by email activation token
   router.get(
-    "/auth/activate",
+    "/auth/activate/:token",
     celebrate(validator.activate),
     controller.activate
   );
@@ -31,9 +32,30 @@ module.exports = (router) => {
 
   // for reset password after restore password
   router.post(
-    "/auth/reset-password",
-    celebrate(validator.resetPassword),
+    "/auth/reset-password/:token",
+    celebrate(validator.changePassword),
     controller.resetPassword
   );
-  
+
+  router.post(
+    "/auth/update",
+    Multer.single("pimg"), // for upload profile img
+    authenticate(),
+    celebrate(validator.update),
+    controller.updateUser
+  );
+
+  router.post(
+    "/auth/delete",
+    authenticate(),
+    celebrate(validator.disableAndDelete),
+    controller.delete
+  );
+
+  router.post(
+    "/auth/disable",
+    authenticate(),
+    celebrate(validator.disableAndDelete),
+    controller.disable
+  );
 };

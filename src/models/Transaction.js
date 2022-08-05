@@ -1,3 +1,5 @@
+const { Schema } = require("mongoose");
+
 const TransactionStatus = {
   PENDING: "PENDING",
   APPROVED: "APPROVED",

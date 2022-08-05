@@ -3,7 +3,7 @@ const { NotFound, BadRequest } = require("http-errors");
 const { User } = require("../../models/User");
 const notficationEmitter = require("../../helpers/NotficationBuilder");
 const { Account } = require("../../models/Account");
-const { events } = require("./constants");
+const { events } = require("../../helpers/constants");
 const { Payment } = require("../../models/Payment");
 const objectId = (id) => new mongodb.Types.ObjectId(id);
 
