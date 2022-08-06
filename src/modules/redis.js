@@ -1,5 +1,14 @@
 const ioredis = require("ioredis");
 
-const createConnection = () => new ioredis(process.env.REDISDB_URI);
+let con = null;
+
+const createConnection = () => {
+
+    if(!con){
+        con = new ioredis(process.env.REDISDB_URI)
+    }
+
+    return con;
+};
 
 module.exports = { createConnection };

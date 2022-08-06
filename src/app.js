@@ -4,7 +4,6 @@ const { join } = require("path");
 if (process.env.NODE_ENV === "development") {
   config({ path: join(process.cwd(), `${process.env.NODE_ENV}.env`) });
 }
-
 const http = require("http");
 const { wrapSocketIo } = require("./web-sockets/io");
 const mongodb = require("./modules/mongodb");
@@ -20,6 +19,7 @@ async function main() {
   const mongoConnection = mongodb();
 
   const redisConnection = redis.createConnection();
+
 
   srv.listen(process.env.PORT, () => {
     logger.info(`Server is running on port ${process.env.PORT}`);
