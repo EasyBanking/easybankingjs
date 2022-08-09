@@ -1,10 +1,6 @@
-const { config } = require("dotenv");
-const { join } = require("path");
-
-if (process.env.NODE_ENV === "development") {
-  config({ path: join(process.cwd(), `${process.env.NODE_ENV}.env`) });
+if (process.env.NODE_ENV !== "production") {
+  require("dotenv")?.config();
 }
-
 const http = require("http");
 const { wrapSocketIo } = require("./web-sockets/io");
 const mongodb = require("./modules/mongodb");

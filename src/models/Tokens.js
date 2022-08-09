@@ -13,10 +13,6 @@ const TokenSchema = new Schema(
       required: true,
       index: true,
     },
-    expireAt: {
-      type: Number,
-      required: true,
-    },
     token: {
       type: String,
       required: true,

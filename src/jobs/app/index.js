@@ -23,8 +23,6 @@ const handleTokensJobs = async (job) => {
   if (job.name === jobs.DELETE_RESET_PAASSWORD_TOKEN) {
     await Token.findOneAndRemove(new Types.ObjectId(job.data.id));
   }
-
-
 };
 
 const AppWorker = new Worker("AppQueue", handleTokensJobs, {

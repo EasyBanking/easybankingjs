@@ -1,24 +1,19 @@
 const { User } = require("../../models/User");
 const { Token } = require("../../models/Tokens");
 const { BadRequest, NotFound, Unauthorized } = require("http-errors");
-const sharp = require("sharp");
-const path = require("path");
 const { AppQueue } = require("../../jobs/app");
 const { jobs } = require("../../helpers/constants");
 const { mailer } = require("../../modules/mailer");
+const uploader = require("../../helpers/uploader");
 const { randomBytes } = require("crypto");
 const mongodb = require("mongoose");
 const jsonwebtoken = require("jsonwebtoken");
 const { compareSync } = require("bcryptjs");
-const { unlinkSync } = require("fs");
-const { join } = require("path");
 const objectId = (id) => new mongodb.Types.ObjectId(id);
 
 module.exports = {
   async register(req, res) {
     const { username, email, password, question, answear } = req.body;
-
-    let imgPath_;
 
     let session = await mongodb.startSession();
     session.startTransaction();
@@ -29,6 +24,7 @@ module.exports = {
     };
 
     try {
+      console.log("1");
       // if username or email existed
       const isExist = await FilterUser({ username, email });
 
@@ -36,16 +32,12 @@ module.exports = {
         let existMsg = " is exist try another one";
         throw new BadRequest(
           `${
-            isExist.username === username
+            isExist?.username === username
               ? `username` + existMsg
               : "email" + existMsg
           }`
         );
       }
-
-      // handle profile image
-      const imgPath = (username) =>
-        path.join("uploads", "images", `img-${username}-${Date.now()}.webp`);
 
       // saving user
 
@@ -59,32 +51,28 @@ module.exports = {
         },
       });
 
+      const token_ = randomBytes(16).toString("hex");
+
       const token = new Token({
         userId: usr._id,
-        token: randomBytes(16).toString("hex"),
+        token: token_,
         expireAt: Date.now() + 86400000, // expire after 24 hours
         type: "emailConfirmation",
       });
 
       // send a message to user to opens his mail and activate it
-      imgPath_ = imgPath(usr.username);
 
-      await sharp(req.file.buffer)
-        .resize(150, 150)
-        .toFormat("webp")
-        .toFile(imgPath_);
+      const img = await uploader.upload(req.file, usr.id);
 
-      usr.profileImg = imgPath_;
+      usr.profileImg = img.secure_url;
 
       // sending an activation email to the user
-
       ids["user"] = usr._id;
       ids["token"] = token._id;
 
-      await sendActivationMail(token.token, usr.email);
+      await sendActivationMail(token_, usr.email);
       await token.save();
       await usr.save();
-
       // adding a job to delete tokens after expire [after 24 housr]
       const deleteActionTokenJob = AppQueue.add(
         jobs.DELETE_EMAIL_ACTIVATION_TOKEN,
@@ -101,13 +89,9 @@ module.exports = {
       await session.commitTransaction();
     } catch (err) {
       await session.abortTransaction();
-
       const usr = await User.findById(ids["user"]).orFail();
-
       await usr.deleteOne();
-
       await Token.deleteOne({ _id: ids["token"] });
-
       throw err;
     } finally {
       await session.endSession();
@@ -120,14 +104,15 @@ module.exports = {
   },
 
   async activate(req, res) {
-    const { token } = req.params;
+    // const { token } = req.params;
+    const { token } = req.query;
 
     try {
-      const token_ = await Token.findOne({ token });
+      const token_ = await Token.findOne({
+        token,
+      });
 
-      const isExpired = token_?.["expireAt"] < Date.now();
-
-      if (!token_ || isExpired) {
+      if (!token_) {
         throw new Error("Invalid token or maybe expired try another one !");
       }
 
@@ -139,9 +124,10 @@ module.exports = {
         throw new Error("Invalid activation token");
       }
 
-      await token_.remove();
+      await token_.deleteOne()
+
     } catch (err) {
-      throw new BadRequest("Invalid token or maybe expired try another one !");
+      throw new BadRequest("Invalid token");
     }
 
     res.json({
@@ -177,10 +163,12 @@ module.exports = {
     res.json({
       message: "User logged in successfully",
       token,
+      user,
     });
   },
 
   async forgetPassword(req, res) {
+
     const { question, answear, email } = req.body;
 
     const user = await User.findOne({ email });
@@ -229,10 +217,11 @@ module.exports = {
     try {
       const token_ = await Token.findOne({ token });
 
+      console.log(token_?.["expireAt"]);
+
       if (!token_) {
         throw new BadRequest("Invalid token");
       }
-
       const isExpired = token_?.["expireAt"] < Date.now();
 
       if (isExpired) {
@@ -267,8 +256,6 @@ module.exports = {
   async updateUser(req, res) {
     const { username, email, password, question, answear } = req.body;
 
-    let imgPath_;
-
     let session = await mongodb.startSession();
     session.startTransaction();
 
@@ -299,23 +286,15 @@ module.exports = {
         usr.password = password;
       }
 
-      const imgPath = (username) =>
-        path.join("uploads", "images", `img-${username}-${Date.now()}.webp`);
-
       if (req.file) {
         // handle profile image
         if (usr.profileImg) {
-          unlinkSync(join(process.cwd(), usr.profileImg));
+          await uploader.delete(usr.id);
         }
 
-        imgPath_ = imgPath(usr.username);
+        let img = await uploader.upload(req.file);
 
-        await sharp(req.file.buffer)
-          .resize(150, 150)
-          .toFormat("webp")
-          .toFile(imgPath_);
-
-        usr.profileImg = imgPath_;
+        usr.profileImg = img.secure_url;
       }
 
       await usr.save();
@@ -429,6 +408,7 @@ module.exports = {
 
   async update_admin(req, res) {
     const { id } = req.params;
+
     const { username, email, password, question, answear, isAcitive } =
       req.body;
 
@@ -439,14 +419,14 @@ module.exports = {
 
     try {
       const usr = await User.findOne({
-        _id: req.user._id,
+        _id: objectId(id),
       });
 
       const isExist = await User.findOne({
         username,
         email,
         _id: {
-          $ne: req.user._id,
+          $ne: objectId(id),
         },
       });
 
@@ -465,30 +445,22 @@ module.exports = {
         usr.password = password;
       }
 
-      const imgPath = (username) =>
-        path.join("uploads", "images", `img-${username}-${Date.now()}.webp`);
-
       if (req.file) {
         // handle profile image
         if (usr.profileImg) {
-          unlinkSync(join(process.cwd(), usr.profileImg));
+          await uploader.delete(usr.id);
         }
 
-        imgPath_ = imgPath(usr.username);
+        const img = await uploader.upload(req.file);
 
-        await sharp(req.file.buffer)
-          .resize(150, 150)
-          .toFormat("webp")
-          .toFile(imgPath_);
-
-        usr.profileImg = imgPath_;
+        usr.profileImg = img.secure_url;
       }
 
       await usr.save();
 
       await session.commitTransaction();
 
-      const usr_ = usr.toObject()
+      const usr_ = usr.toObject();
 
       delete usr_["password"];
 
@@ -496,7 +468,6 @@ module.exports = {
         data: usr_,
         message: "user has been updated Succesfully",
       });
-      
     } catch (err) {
       await session.abortTransaction();
       throw err;
@@ -523,7 +494,7 @@ const sendPasswordResetToken = async (token, email) => {
       text: "get the full functionality by reset your password",
       html: `<p>Hello,</p>
     <p>Please click on the following link to reset your password:</p>
-    <p><a href="${process.env["APP_URL"]}/api/auth/reset-password/${token}">${process.env["APP_URL"]}/api/auth/reset-password/${token}</a></p>
+    <p><a href="${process.env["PASSWORD_RESTORE_LINK"]}/${token}">${process.env["PASSWORD_RESTORE_LINK"]}/reset-password/${token}</a></p>
     <p>If you did not request this, please ignore this email.</p>
     <p>Thanks,</p>
     <p>${process.env["APP_NAME"]}</p>`,
@@ -541,7 +512,7 @@ const sendActivationMail = async (token, email) => {
     text: "get the full functionality by activate your account",
     html: `<p>Hello,</p>
   <p>Please click on the following link to activate your account:</p>
-  <p><a href="${process.env["APP_URL"]}/api/auth/activate/${token}">${process.env["APP_URL"]}/api/auth/activate/${token}</a></p>
+  <p><a href="${process.env["ACTIVATION_ACCOUNT_URI"]}/${token}">${process.env["ACTIVATION_ACCOUNT_URI"]}/${token}</a></p>
   <p>If you did not request this, please ignore this email.</p>
   <p>this link will expire after 24 hours</p>
   <p>Thanks,</p>
