@@ -45,6 +45,7 @@ app.use(hpp());
 
 if (!isDev) {
   app.use(rateLimit(rateLimitConf));
+  app.use(cors([process.env.ADMIN_CORS, process.env.CLIENT_CORS]));
 }
 
 app.use(timeout("40s"));

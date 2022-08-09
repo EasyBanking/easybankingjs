@@ -3,7 +3,7 @@ const bcrypt = require("bcryptjs");
 const fs = require("fs");
 const path = require("path");
 const { notficationSchema } = require("./Notfication");
-
+const uploader = require("../helpers/uploader");
 const Roles = {
   ADMIN: "ADMIN",
   USER: "USER",
@@ -85,12 +85,9 @@ UserSchema.pre("save", function (next) {
   next();
 });
 
-UserSchema.post("deleteOne", { document: true }, function () {
+UserSchema.post("deleteOne", { document: true }, async function () {
   const profileImgPath = path.join(process.cwd(), this.profileImg);
-
-  if (fs.existsSync(profileImgPath)) {
-    fs.unlinkSync(profileImgPath);
-  }
+  await uploader.delete(this.id);
 });
 
 const User = model("User", UserSchema);

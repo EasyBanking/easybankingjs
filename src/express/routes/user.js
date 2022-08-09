@@ -10,13 +10,13 @@ module.exports = (router) => {
   router.post(
     "/auth/register",
     Multer.single("pimg"), // for upload profile img
-    celebrate(validator.register),
+    celebrate(validator.register, { allowUnknown: true }),
     controller.register
   );
 
   // activate user by email activation token
   router.get(
-    "/auth/activate/:token",
+    "/auth/activate",
     celebrate(validator.activate),
     controller.activate
   );

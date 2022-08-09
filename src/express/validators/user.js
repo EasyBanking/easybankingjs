@@ -11,7 +11,7 @@ const register = {
 };
 
 const activate = {
-  params: Joi.object({
+  query: Joi.object({
     token: Joi.string().length(32).required(),
   }),
 };
@@ -35,8 +35,8 @@ const changePassword = {
 
 const login = {
   body: Joi.object({
-    username: Joi.string().min(5).max(55).required(),
-    password: Joi.string().min(5).max(55).required(),
+    username: Joi.string().min(4).max(55).required(),
+    password: Joi.string().min(4).max(55).required(),
     remember: Joi.boolean().required(),
   }),
 };

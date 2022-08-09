@@ -3,6 +3,7 @@ const locationRouter = require("./location");
 const userRouter = require("./user");
 const accountRouter = require("./account");
 const adminRouter = require("./admin");
+const utilsRouter = require("./utils");
 
 const router = Router();
 
@@ -16,6 +17,8 @@ userRouter(router);
 accountRouter(router);
 
 adminRouter(router);
+
+utilsRouter(router);
 
 // admin router
 
