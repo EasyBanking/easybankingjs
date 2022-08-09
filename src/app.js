@@ -1,5 +1,6 @@
-const { config } = require("dotenv");
-config();
+if (process.env.NODE_ENV !== "production") {
+  require("dotenv")?.config();
+}
 const http = require("http");
 const { wrapSocketIo } = require("./web-sockets/io");
 const mongodb = require("./modules/mongodb");
