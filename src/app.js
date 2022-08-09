@@ -1,7 +1,9 @@
 const { config } = require("dotenv");
 const { join } = require("path");
 
-config({ path: join(process.cwd(), `${process.env.NODE_ENV}.env`) });
+if (process.env.NODE_ENV === "development") {
+  config({ path: join(process.cwd(), `${process.env.NODE_ENV}.env`) });
+}
 
 const http = require("http");
 const { wrapSocketIo } = require("./web-sockets/io");
