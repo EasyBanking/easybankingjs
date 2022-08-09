@@ -6,7 +6,7 @@ const auth = passport;
 
 const options = {
   secretOrKey: process.env["JWT_SECRET"],
-  jwtFromRequest: jwt.ExtractJwt.fromHeader(process.env["JWT_TOKEN_HEADER"]),
+  jwtFromRequest: jwt.ExtractJwt.fromAuthHeaderAsBearerToken(),
 };
 
 const authCb = async (payload, done) => {

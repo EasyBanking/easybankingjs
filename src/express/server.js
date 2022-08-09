@@ -13,6 +13,7 @@ const { morganMiddleware } = require("../modules/logger");
 const errorHandler = require("./middlewares/ErrorHandler");
 const routes = require("./routes");
 const app = express();
+const bodyparser = require("body-parser");
 const isDev = process.env.NODE_ENV === "development";
 
 const rateLimitConf = {
@@ -37,6 +38,7 @@ app.use(compression());
 app.use(morganMiddleware);
 app.use(cors({ origin: "*" }));
 app.use(express.json());
+app.use(bodyparser.urlencoded({ extended: true }));
 app.use(cookieParser(process.env["COOKIE_SECRET"]));
 app.use(cookieSession(cookieConf));
 app.use(hpp());

@@ -6,7 +6,6 @@ const authenticate = require("../middlewares/Auth");
 // locations resource router
 
 module.exports = (router) => {
-
   router.get("/location", authenticate(), controller.getAll);
 
   router.get(
@@ -17,10 +16,9 @@ module.exports = (router) => {
   );
 
   router.get(
-    "/location/nearest-location",
+    "/location/nearest",
     authenticate(),
     celebrate(validator.findNearest),
     controller.findNearest
   );
-  
 };

@@ -12,7 +12,7 @@ module.exports = {
 
   async search(req, res) {
     const { address } = req.query;
-    const locations = Location.find({
+    const locations = await Location.find({
       address: {
         $regex: address || "",
         $options: "i",
@@ -28,7 +28,7 @@ module.exports = {
     const { latitude, longitude } = req.query;
     const target = point([longitude, latitude]);
 
-    const locations = await this.getAll();
+    const locations = await Location.find();
 
     const features = locations.map((location) => {
       return point([location.longitude, location.latitude]);

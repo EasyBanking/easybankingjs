@@ -18,7 +18,7 @@ const Authorize = (role) => {
     }
 
     if (user.role !== role) {
-      throw new Unauthorized();
+      throw new Unauthorized("you are not allowed !");
     }
 
     return next();
