@@ -1,7 +1,10 @@
 module.exports = {
   redis: {
-    host: process.env["REDIS_HOST"],
     port: process.env["REDIS_PORT"],
+    host: process.env["REDIS_HOST"],
+    password: process.env["REDIS_PASSWORD"],
+    username: process.env.REDIS_NAME,
+    db: process.env.REDIS_DB,
   },
 
   jobs: {
