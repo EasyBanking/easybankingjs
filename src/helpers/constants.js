@@ -3,6 +3,8 @@ module.exports = {
     host: process.env["REDIS_HOST"],
     port: process.env["REDIS_PORT"],
     database: process.env["REDIS_DB"],
+    password: process.env["REDIS_PASSWORD"],
+    user: process.env["REDIS_USER"],
   },
 
   jobs: {
