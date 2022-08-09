@@ -9,7 +9,7 @@
   "scripts": {
     "test": "jest",
     "dev": "env-cmd -e development nodemon --config nodemon.json src/app.js",
-    "start": "node src/app.js",
+    "start": "node ./src/app.js",
     "db:seed": "env-cmd -e development node src/seeders/index.js",
     "db:clear": "env-cmd -e development node src/commands/reset-db.js"
   },
