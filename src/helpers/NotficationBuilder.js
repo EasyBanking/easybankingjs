@@ -9,16 +9,15 @@ emitter.on(events.NOTFICATION, async (data) => {
     new NotFound("User not found")
   );
 
-  if (Object.values(events).includes(data.type)) {
-    user.notfications.push({
-      content: generateNotficationContent(
-        events[data.type],
-        data.user
-      )(data.amount),
-      viewed: false,
-    });
-    await user.save();
-  }
+  user.notfications.push({
+    content: generateNotficationContent(
+      events[data.type],
+      data.user
+    )(data?.amount),
+    viewed: false,
+  });
+
+  await user.save();
 });
 
 // ntofications helper

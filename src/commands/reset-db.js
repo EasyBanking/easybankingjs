@@ -1,10 +1,9 @@
-const { config } = require("dotenv");
 const { join } = require("path");
 const mongo = require("../modules/mongodb");
 const { logger } = require("../modules/logger");
 
 if (process.env.NODE_ENV === "development") {
-  config({ path: join(process.cwd(), `${process.env.NODE_ENV}.env`) });
+  require("dotenv").config();
 }
 
 async function runScript() {

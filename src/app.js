@@ -9,6 +9,7 @@ const redis = require("./modules/redis");
 const { logger } = require("./modules/logger");
 
 async function main() {
+  
   const srv = http.createServer(express.app);
 
   const io = wrapSocketIo(srv);

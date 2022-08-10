@@ -14,6 +14,7 @@ const errorHandler = require("./middlewares/ErrorHandler");
 const routes = require("./routes");
 const app = express();
 const bodyparser = require("body-parser");
+const csurf = require("csurf");
 const isDev = process.env.NODE_ENV === "development";
 
 const rateLimitConf = {
@@ -36,17 +37,30 @@ const cookieConf = {
 app.use(helmet());
 app.use(compression());
 app.use(morganMiddleware);
-app.use(cors({ origin: "*" }));
 app.use(express.json());
 app.use(bodyparser.urlencoded({ extended: true }));
 app.use(cookieParser(process.env["COOKIE_SECRET"]));
 app.use(cookieSession(cookieConf));
 app.use(hpp());
+app.use(
+  cors({
+    credentials: true,
+    origin: [process.env.ADMIN_CORS, process.env.CLIENT_ORIGIN],
+  })
+);
 
 if (!isDev) {
   app.use(rateLimit(rateLimitConf));
-  app.use(cors([process.env.ADMIN_CORS, process.env.CLIENT_CORS]));
 }
+
+app.use(
+  csurf({
+    cookie: {
+      sameSite: false,
+      maxAge: 3600,
+    },
+  })
+);
 
 app.use(timeout("40s"));
 
