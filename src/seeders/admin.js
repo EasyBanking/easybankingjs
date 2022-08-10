@@ -1,17 +1,26 @@
 const { User } = require("../models/User");
 
 async function seed() {
-  await User.create({
-    username: process.env.ADMIN_USERNAME,
-    password: process.env.ADMIN_PASSWORD,
-    email: process.env.ADMIN_EMAIL,
-    role: "ADMIN",
-    security: {
-      question: "What is your favorite color?",
-      answer: "blue",
+  const usr = await User.exists({
+    $or: {
+      username: process.env.ADMIN_USERNAME,
+      email: process.env.ADMIN_EMAIL,
     },
-    isAcitive: true,
   });
+
+  if (!usr) {
+    await User.create({
+      username: process.env.ADMIN_USERNAME,
+      password: process.env.ADMIN_PASSWORD,
+      email: process.env.ADMIN_EMAIL,
+      role: "ADMIN",
+      security: {
+        question: "What is your favorite color?",
+        answer: "blue",
+      },
+      isAcitive: true,
+    });
+  }
 }
 
 // just name of the seeder

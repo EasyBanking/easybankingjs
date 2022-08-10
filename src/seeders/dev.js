@@ -1,22 +1,21 @@
 const { config } = require("dotenv");
-const { join } = require("path");
+
+config();
+
 const { logger } = require("../modules/logger");
+
 const mongo = require("../modules/mongodb");
 
 // seeders
-
 const LoctionSeeder = require("./location");
 const UsersSeeder = require("./user");
-const AdminSeeder = require("./admin");
-
-if (process.env.NODE_ENV === "development") {
-  config({ path: join(process.cwd(), `${process.env.NODE_ENV}.env`) });
-}
 
 // seeders array here
-const seeders = [LoctionSeeder, AdminSeeder, UsersSeeder];
+const seeders = [LoctionSeeder, UsersSeeder];
+
 
 async function main() {
+
   const con = await mongo();
 
   for (let seeder of seeders) {
