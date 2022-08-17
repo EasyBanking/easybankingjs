@@ -23,9 +23,6 @@ const updateAccount = {
     dateOfBirth: Joi.string().min(2).max(55).required(),
     addresse: Joi.string().min(2).max(55).required(),
   }),
-  /* params:{
-    otp:""
-  }*/
 };
 
 const createAccount = {
@@ -39,6 +36,12 @@ const createAccount = {
   }),
 };
 
+const find = {
+  query: Joi.object({
+    id: Joi.string().required().length(24),
+  }),
+};
+
 const pay = {
   body: Joi.object({
     atmPin: Joi.string().length(4).required(),
@@ -47,9 +50,6 @@ const pay = {
 };
 
 const readPayment = {
-  body: Joi.object({
-    atmPin: Joi.string().length(4).required(),
-  }),
   params: {
     token: Joi.string().length(16).required(),
   },
@@ -77,13 +77,43 @@ const update_admin = {
   }),
 };
 
+const Transactions = {
+  query: Joi.object({
+    limit: Joi.number(),
+  }),
+};
+
+const schedules = ["teller", "customer serivce", "other"];
+
+const createSchedule = {
+  body: Joi.object({
+    date: Joi.string().required(),
+    location_id: Joi.string().length(24).required(),
+    type: Joi.string()
+      .equal(...schedules)
+      .required(),
+  }),
+};
+
+const deleteSchedule = {
+  body: Joi.object({
+    location_id: Joi.string().length(24).required(),
+    timestamp: Joi.string().required(),
+    schedule_id: Joi.string().length(24).required(),
+  }),
+};
+
 module.exports = {
+  deleteSchedule,
   update_admin,
+  createSchedule,
   objectId,
+  Transactions,
   pay,
   readPayment,
   transferMoney,
   search,
+  find,
   updateAccount,
   createAccount,
 };

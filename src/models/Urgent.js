@@ -1,4 +1,4 @@
-const { Schema } = require("mongoose");
+const { Schema, model, Types } = require("mongoose");
 
 const UrgentTypes = {
   INFO: "info",
@@ -33,4 +33,6 @@ const UrgentSchema = new Schema(
   { versionKey: false }
 );
 
-module.exports = { UrgentSchema };
+const Urgent = model("Urgent", UrgentSchema);
+
+module.exports = { UrgentSchema, Urgent };

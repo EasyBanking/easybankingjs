@@ -9,6 +9,10 @@ const { randomBytes } = require("crypto");
 const mongodb = require("mongoose");
 const jsonwebtoken = require("jsonwebtoken");
 const { compareSync } = require("bcryptjs");
+const { Notfication } = require("../../models/Notfication");
+const { Urgent } = require("../../models/Urgent");
+const { Location } = require("../../models/Location");
+const { Transaction } = require("../../models/Transaction");
 const objectId = (id) => new mongodb.Types.ObjectId(id);
 
 module.exports = {
@@ -24,12 +28,14 @@ module.exports = {
     };
 
     try {
-      console.log("1");
       // if username or email existed
       const isExist = await FilterUser({ username, email });
+      console.log(existMsg);
 
       if (isExist) {
         let existMsg = " is exist try another one";
+        console.log(existMsg);
+
         throw new BadRequest(
           `${
             isExist?.username === username
@@ -87,7 +93,13 @@ module.exports = {
       );
 
       await session.commitTransaction();
+
+      res.json({
+        message:
+          "acitivation link sent to your email , ! link expires after 24 hours",
+      });
     } catch (err) {
+      console.log(err);
       await session.abortTransaction();
       const usr = await User.findById(ids["user"]).orFail();
       await usr.deleteOne();
@@ -96,11 +108,6 @@ module.exports = {
     } finally {
       await session.endSession();
     }
-
-    res.json({
-      message:
-        "acitivation link sent to your email , ! link expires after 24 hours",
-    });
   },
 
   async activate(req, res) {
@@ -124,8 +131,7 @@ module.exports = {
         throw new Error("Invalid activation token");
       }
 
-      await token_.deleteOne()
-
+      await token_.deleteOne();
     } catch (err) {
       throw new BadRequest("Invalid token");
     }
@@ -168,7 +174,6 @@ module.exports = {
   },
 
   async forgetPassword(req, res) {
-
     const { question, answear, email } = req.body;
 
     const user = await User.findOne({ email });
@@ -193,7 +198,14 @@ module.exports = {
       type: "passwordReset",
     });
 
-    await sendPasswordResetToken(token, user.email);
+    try {
+      await sendPasswordResetToken(token, user.email);
+    } catch (err) {
+      console.log(err);
+      return res.json({
+        message: "error in message provider",
+      });
+    }
 
     AppQueue.add(
       jobs.DELETE_RESET_PAASSWORD_TOKEN,
@@ -475,6 +487,96 @@ module.exports = {
       await session.endSession();
     }
   },
+
+  async checkMe(req, res) {
+    const usr = req.user;
+    delete usr["password"];
+    res.json({
+      user: usr,
+    });
+  },
+
+  async search(req, res) {
+    const { q } = req.query;
+
+    /**
+     * transactions  []
+     * notrications  []
+     * payments      []
+     * schedules     []
+     */
+
+    // by aggregations
+
+    const data = await User.find({
+      _id: objectId(req.user._id),
+    })
+      .and([
+        {
+          $or: [
+            {
+              "account.urgents.content": {
+                $regex: q,
+                $options: "i",
+              },
+            },
+            {
+              "account.schedules.type": {
+                $regex: q,
+                $options: "i",
+              },
+            },
+            {
+              "notfications.content": {
+                $regex: q,
+                $options: "i",
+              },
+            },
+            {
+              "account.transactions.type": {
+                $regex: q,
+                $options: "i",
+              },
+            },
+            {
+              "account.transactions.status": {
+                $regex: q,
+                $options: "i",
+              },
+            },
+            {
+              "account.transactions.amount": q,
+            },
+          ],
+        },
+      ])
+      .populate([
+        "notfications",
+        "account",
+        "account.urgents",
+        "account.schedules",
+        "account.sender",
+        "account.receiver",
+      ])
+      .exec();
+
+    const Locations = await Location.find({
+      address: {
+        $regex: q,
+        $options: "i",
+      },
+    });
+
+    console.log(data);
+
+    res.json({
+      count: data?.length,
+      result: {
+        data,
+        locations: Locations,
+      },
+    });
+  },
 };
 
 // service here
@@ -482,7 +584,7 @@ module.exports = {
 const FilterUser = (query) => {
   return User.findOne({
     $and: [query],
-  });
+  }).exec();
 };
 
 const sendPasswordResetToken = async (token, email) => {
@@ -500,7 +602,7 @@ const sendPasswordResetToken = async (token, email) => {
     <p>${process.env["APP_NAME"]}</p>`,
     });
   } catch (err) {
-    console.log(err.message, err.response.body);
+    console.log(err.message, err);
   }
 };
 

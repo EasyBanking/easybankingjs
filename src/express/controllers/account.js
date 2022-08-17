@@ -3,8 +3,11 @@ const { NotFound, BadRequest } = require("http-errors");
 const { User } = require("../../models/User");
 const notficationEmitter = require("../../helpers/NotficationBuilder");
 const { Account } = require("../../models/Account");
+const { Schedule } = require("../../models/Schedule");
+const counterEmitter = require("../../jobs/counter");
 const { events } = require("../../helpers/constants");
 const { Payment, PaymentStatus } = require("../../models/Payment");
+const { once } = require("events");
 const {
   Transaction,
   TransactionsType,
@@ -13,12 +16,109 @@ const {
 const objectId = (id) => new mongodb.Types.ObjectId(id);
 const { randomBytes } = require("crypto");
 const { compareSync, hashSync } = require("bcryptjs");
+const { createConnection } = require("../../modules/redis");
+const { logger } = require("../../modules/logger");
 
 module.exports = {
+  async deleteSchedule(req, res) {
+    const { location_id, timestamp, schedule_id } = req.body;
+
+    const exists = await Account.exists({
+      "schedules._id": schedule_id,
+    });
+
+    if (!exists) {
+      throw new BadRequest("schedule is not exist !");
+    }
+
+    counterEmitter.emit(
+      "counter.dec",
+      location_id,
+      timestamp,
+      req.user.account._id,
+      schedule_id
+    );
+
+    res.json({
+      message: "scheudle is beeing deleted.",
+    });
+  },
+  async createSchedule(req, res) {
+    const { location_id, type, date } = req.body;
+    try {
+      counterEmitter.emit(
+        "counter.inc",
+        location_id,
+        date,
+        type,
+        req.user.account._id
+      );
+
+      res.json({
+        message: "schedule is beeing proceessed .",
+      });
+    } catch (err) {
+      logger.error(err.message);
+      throw err;
+    }
+  },
+  async transactions(req, res) {
+    const { limit } = req.query;
+    const trans = await Transaction.find({
+      $or: [
+        {
+          sender: objectId(req.user.account._id),
+        },
+        {
+          receiver: objectId(req.user.account._id),
+        },
+      ],
+    })
+      .limit(limit || 100)
+      .sort({
+        datetime: -1,
+      })
+      .transform(async (docs) => {
+        const mapped = [];
+
+        for (let i = 0; i < docs.length; i++) {
+          const usr = await docs[i].sender.user;
+          const usr2 = await docs[i]?.receiver?.user;
+          mapped[i] = {
+            ...docs[i].toObject(),
+            sender: {
+              ...docs[i].sender.toObject(),
+              user: {
+                username: usr.username,
+                profile_img: usr.profileImg,
+              },
+            },
+            receiver: {
+              ...docs[i]?.receiver?.toObject(),
+              user: {
+                username: usr2?.username,
+                profile_img: usr2?.profileImg,
+              },
+            },
+          };
+        }
+
+        return mapped;
+      })
+      .populate(["sender", "receiver"])
+      .exec();
+
+    // profileImg: (await User.findOne({ account: t.sender._id })).profileImg,
+
+    console.log(await trans[0].sender?.user);
+
+    res.json({
+      data: trans,
+    });
+  },
   async createAccount(req, res) {
     const { firstName, lastName, dateOfBirth, addresse, atmPin, nationalId } =
       req.body;
-
     let session = await mongodb.startSession();
     session.startTransaction();
 
@@ -92,7 +192,7 @@ module.exports = {
       const transaction_ = await Transaction.create({
         amount,
         type: TransactionsType.TRANSFER,
-        sender: req.user._id,
+        sender: sender._id,
         receiver: receiver._id,
         status: TransactionStatus.APPROVED,
         datetime: new Date(),
@@ -256,15 +356,12 @@ module.exports = {
 
   async readPayment(req, res) {
     const { token } = req.params;
-    const { atmPin } = req.body;
 
     const trans = await mongodb.startSession();
 
     trans.startTransaction();
 
     try {
-      await validatePin(atmPin, req.user.account);
-
       // shoudl contains a transactionId
       const payment = await Payment.findOne({
         token,
@@ -293,15 +390,11 @@ module.exports = {
       }
 
       const receiver = await Account.findById(
-        objectId(req.user.account)
+        objectId(req.user.account._id)
       ).orFail(new BadRequest("Account not found"));
 
       if (receiver.status != "active") {
         throw new BadRequest("Account is not active");
-      }
-
-      if (sender.currency !== receiver.currency) {
-        throw new BadRequest("Currency mismatch");
       }
 
       const senderBalance = sender.balance - payment.amount;
@@ -325,7 +418,7 @@ module.exports = {
       ).orFail(new NotFound("transaction is not valid"));
 
       const receiverAccount = await Account.findByIdAndUpdate(
-        objectId(req.user.account),
+        objectId(req.user.account._id),
         {
           balance: receiver.balance + payment.amount,
         }
@@ -426,6 +519,19 @@ module.exports = {
     } finally {
       await trans.endSession();
     }
+  },
+
+  async findOne(req, res) {
+    const { id } = req.query;
+
+    const usr = await User.findOne({
+      account: objectId(id),
+    })
+      .populate("account")
+      .orFail(new NotFound("account not found ."))
+      .exec();
+
+    res.json({ user: usr });
   },
 };
 

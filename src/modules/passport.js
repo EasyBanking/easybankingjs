@@ -1,3 +1,4 @@
+const { Types } = require("mongoose");
 const passport = require("passport");
 const jwt = require("passport-jwt");
 const { User } = require("../models/User");
@@ -11,7 +12,10 @@ const options = {
 
 const authCb = async (payload, done) => {
   try {
-    const user = await User.findOne({ id: payload?.id }).orFail();
+    const user = await User.findOne({ _id: new Types.ObjectId(payload.id) })
+      .populate("account")
+      .orFail()
+      .exec()
     return done(null, user);
   } catch (er) {
     done(er, false);

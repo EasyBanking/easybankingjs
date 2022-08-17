@@ -1,6 +1,6 @@
-const { Schema, model } = require("mongoose");
+const { Schema, model, Types } = require("mongoose");
 const bcrypt = require("bcryptjs");
-const { UrgentSchema } = require("./Urgent");
+const { User } = require("./User");
 
 const accountStatus = {
   active: "active",
@@ -51,12 +51,22 @@ const AccountSchema = new Schema(
       required: true,
     },
     urgents: {
-      type: [UrgentSchema],
+      type: [Types.ObjectId],
+      default: [],
+      ref: "Urgent",
+    },
+    schedules: {
+      type: [Types.ObjectId],
+      ref: "Schedule",
       default: [],
     },
   },
   { versionKey: false }
 );
+
+AccountSchema.virtual("user").get(async function () {
+  return await User.findOne({ account: this._id });
+});
 
 AccountSchema.pre("save", function (next) {
   if (this.isModified("atmPin")) {

@@ -48,5 +48,31 @@ module.exports = (router) => {
     controller.readPayment
   );
 
+  router.get(
+    "/account/find",
+    authenticate(),
+    celebrate(validator.find),
+    controller.findOne
+  );
 
+  router.get(
+    "/account/transactions",
+    authenticate(),
+    celebrate(validator.Transactions),
+    controller.transactions
+  );
+
+  router.post(
+    "/account/schedule",
+    authenticate(),
+    celebrate(validator.createSchedule),
+    controller.createSchedule
+  );
+
+  router.delete(
+    "/account/schedule",
+    authenticate(),
+    celebrate(validator.deleteSchedule),
+    controller.deleteSchedule
+  );
 };

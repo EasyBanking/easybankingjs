@@ -16,6 +16,12 @@ const activate = {
   }),
 };
 
+const search = {
+  query: Joi.object({
+    q: Joi.string().min(3).required(),
+  }),
+};
+
 const resetPassword = {
   body: Joi.object({
     email: Joi.string().email().min(5).required(),
@@ -81,4 +87,5 @@ module.exports = {
   changePassword,
   login,
   resetPassword,
+  search,
 };

@@ -1,4 +1,4 @@
-const { Schema } = require("mongoose");
+const { Schema, model } = require("mongoose");
 
 const notficationSchema = new Schema(
   {
@@ -19,4 +19,6 @@ const notficationSchema = new Schema(
   { versionKey: false }
 );
 
-module.exports = { notficationSchema };
+const Notfication = model("Notfication", notficationSchema);
+
+module.exports = { notficationSchema, Notfication };

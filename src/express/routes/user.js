@@ -58,4 +58,14 @@ module.exports = (router) => {
     celebrate(validator.disableAndDelete),
     controller.disable
   );
+
+  // auth checkme
+  router.get("/auth/checkme", authenticate(), controller.checkMe);
+
+  router.get(
+    "/user/search",
+    authenticate(),
+    celebrate(validator.search),
+    controller.search
+  );
 };
