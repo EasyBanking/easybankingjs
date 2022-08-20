@@ -13,9 +13,31 @@ const options = {
 const authCb = async (payload, done) => {
   try {
     const user = await User.findOne({ _id: new Types.ObjectId(payload.id) })
-      .populate("account")
+      .populate([
+        {
+          path: "account",
+          populate: [
+            {
+              path: "schedules",
+              model: "Schedule",
+              populate: {
+                path: "location_id",
+                model: "Location",
+              },
+            },
+            {
+              path: "urgents",
+              model: "Urgent",
+            },
+          ],
+        },
+        {
+          path: "notfications",
+          model: "Notfication",
+        },
+      ])
       .orFail()
-      .exec()
+      .exec();
     return done(null, user);
   } catch (er) {
     done(er, false);

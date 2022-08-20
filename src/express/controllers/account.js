@@ -16,7 +16,6 @@ const {
 const objectId = (id) => new mongodb.Types.ObjectId(id);
 const { randomBytes } = require("crypto");
 const { compareSync, hashSync } = require("bcryptjs");
-const { createConnection } = require("../../modules/redis");
 const { logger } = require("../../modules/logger");
 
 module.exports = {
@@ -24,7 +23,10 @@ module.exports = {
     const { location_id, timestamp, schedule_id } = req.body;
 
     const exists = await Account.exists({
-      "schedules._id": schedule_id,
+      _id: req?.user?.account?._id,
+      schedules: {
+        $eq: schedule_id,
+      },
     });
 
     if (!exists) {
@@ -107,10 +109,6 @@ module.exports = {
       })
       .populate(["sender", "receiver"])
       .exec();
-
-    // profileImg: (await User.findOne({ account: t.sender._id })).profileImg,
-
-    console.log(await trans[0].sender?.user);
 
     res.json({
       data: trans,

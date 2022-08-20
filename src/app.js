@@ -8,12 +8,11 @@ const express = require("./express/server");
 const redis = require("./modules/redis");
 const cronJobs = require("./modules/cron-jobs");
 const { logger } = require("./modules/logger");
-const counter = require("./jobs/counter");
 
 async function main() {
   const srv = http.createServer(express.app);
 
-  const io = wrapSocketIo(srv);
+  const io = await wrapSocketIo(srv);
 
   const mongoConnection = mongodb();
 

@@ -1,10 +1,14 @@
 const { Server } = require("socket.io");
-const socketListenerWrapper = require("./listeners");
+const queueController = require("./listeners/chatqueue");
+const wrapSocketIo = async (http) => {
+  const io = new Server(http, {
+    cors: {
+      origin: [process.env.CLIENT_ORIGIN, process.env.ADMIN_ORIGIN],
+      credentials: true,
+    },
+  });
 
-const wrapSocketIo = (http) => {
-  const io = new Server(http);
-
-  socketListenerWrapper(io);
+  await queueController(io);
 
   return io;
 };

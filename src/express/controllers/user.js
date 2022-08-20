@@ -499,82 +499,82 @@ module.exports = {
   async search(req, res) {
     const { q } = req.query;
 
-    /**
-     * transactions  []
-     * notrications  []
-     * payments      []
-     * schedules     []
-     */
-
-    // by aggregations
-
     const data = await User.find({
-      _id: objectId(req.user._id),
+      _id: objectId(req?.user?._id),
     })
-      .and([
+      .populate([
         {
-          $or: [
+          path: "notfications",
+          select: ["content", "viewed", "_id"],
+        },
+        {
+          path: "account",
+          populate: [
             {
-              "account.urgents.content": {
-                $regex: q,
-                $options: "i",
+              path: "schedules",
+              select: ["type", "date", "priority", "_id"],
+              populate: {
+                path: "location_id",
               },
-            },
-            {
-              "account.schedules.type": {
-                $regex: q,
-                $options: "i",
-              },
-            },
-            {
-              "notfications.content": {
-                $regex: q,
-                $options: "i",
-              },
-            },
-            {
-              "account.transactions.type": {
-                $regex: q,
-                $options: "i",
-              },
-            },
-            {
-              "account.transactions.status": {
-                $regex: q,
-                $options: "i",
-              },
-            },
-            {
-              "account.transactions.amount": q,
             },
           ],
         },
       ])
-      .populate([
-        "notfications",
-        "account",
-        "account.urgents",
-        "account.schedules",
-        "account.sender",
-        "account.receiver",
-      ])
+      .select(["notfications", "account"])
+      .lean()
       .exec();
 
-    const Locations = await Location.find({
-      address: {
-        $regex: q,
-        $options: "i",
-      },
+    const transactions = await Transaction.find({
+      $or: [
+        {
+          sender: req?.user?.account._id,
+        },
+        {
+          receiver: req?.user?.account._id,
+        },
+      ],
+    })
+      .populate(["sender", "receiver"])
+      .lean()
+      .exec();
+
+    const l = (txt) => String(txt).toLowerCase();
+
+    const Locations = await Location.find().lean().exec();
+
+    const mapped = data.map((d) => {
+      return {
+        notfications: d?.notfications?.filter((n) =>
+          l(n?.content).includes(l(q))
+        ),
+        schedules: d?.account?.schedules?.filter(
+          (s) => l(s?.type)?.includes(l(q)) || s?.date?.includes(l(q))
+        ),
+        transactions: transactions?.filter(
+          (t) =>
+            l(t.type).includes(l(q)) ||
+            l(t.status).includes(l(q)) ||
+            new Date(t.datetime).toLocaleString().includes(q) ||
+            t.amount.toString().includes(q) ||
+            l(t?.receiver?.firstName)?.includes(l(q)) ||
+            l(t?.sender?.firstName)?.includes(l(q))
+        ),
+        locations: Locations.filter((loc) => l(loc.address).includes(l(q))),
+        // urgents
+      };
     });
 
-    console.log(data);
+    let count = 0;
+
+    for (const i in mapped[0]) {
+      if (mapped[0][i]?.length) {
+        count = +mapped[0][i]?.length;
+      }
+    }
 
     res.json({
-      count: data?.length,
-      result: {
-        data,
-        locations: Locations,
-      },
+      count: count,
+      result: mapped,
     });
   },
 };

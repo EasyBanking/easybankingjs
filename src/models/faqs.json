@@ -1,12 +1,17 @@
 [
   {
-    "title": "",
-    "description": "",
-    "tags": ["tag", "tag2", "tag3"]
+    "title": "how can i use the application",
+    "description": "just register and activate your application and let things done",
+    "tags": ["activate", "app", "register"]
   },
   {
-    "title": "",
-    "description": "",
-    "tags": ["tag", "tag2", "tag3"]
+    "title": "how to activate my account ?",
+    "description": "you will receve an email with a link activation.",
+    "tags": ["account", "link", "activate"]
+  },
+  {
+    "title": "how to disable my account ?",
+    "description": "open your profile and click on disable account button.",
+    "tags": ["account", "detactivate", "disable"]
   }
 ]

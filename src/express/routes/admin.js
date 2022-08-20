@@ -55,6 +55,7 @@ module.exports = (router) => {
   // users area
 
   router.get("/admin/users", authenticate("ADMIN"), UsersController.getAll);
+  
   router.get(
     "/admin/users/:id",
     authenticate("ADMIN"),

@@ -1,13 +1,14 @@
 const jsonWebToken = require("jsonwebtoken");
 const { Socket } = require("socket.io");
 const { User } = require("../../models/User");
+const { Types } = require("mongoose");
 
 exports.authenticate = (role) => {
   /**
    * @param {Socket} socket
    */
   return (socket, next) => {
-    const token = socket.handshake.auth["token"];
+    const token = socket?.handshake?.auth["token"];
 
     if (!token) {
       next(new Error("Unauthorized"));
@@ -18,14 +19,17 @@ exports.authenticate = (role) => {
         next(new Error("Unauthorized"));
       }
 
-      User.findById(decoded.id)
+      User.findOne({
+        _id: new Types.ObjectId(decoded?.id),
+      })
         .then((user) => {
+          console.log(user);
           if (!user) {
             next(new Error("Unauthorized"));
           }
 
           if (role) {
-            if (user.role !== role) {
+            if (user?.role !== role) {
               next(new Error("Unauthorized"));
             }
           }

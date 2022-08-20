@@ -6,10 +6,13 @@ module.exports = (schema) => {
    */
   return async (socket, next) => {
     try {
-      const [message, body] = socket;
-      const isValid = await schema?.validateAsync(body);
+      if (!socket[1]) {
+        throw new Error("body is required");
+      }
+      const isValid = await schema?.validateAsync(socket?.[1] || {});
       next();
     } catch (err) {
+      console.log(err, "middelware");
       err.data = { content: err.message };
       next(err);
     }

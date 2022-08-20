@@ -1,6 +1,6 @@
 const { Schema, model, Types } = require("mongoose");
 
-const schedules = ["teller", "customer serivce", "other"];
+const schedules = ["teller", "serivce", "other"];
 
 const schema = new Schema({
   type: {

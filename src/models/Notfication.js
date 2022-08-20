@@ -12,7 +12,7 @@ const notficationSchema = new Schema(
       type: Boolean,
       default: false,
     },
-    viewedAt: {
+    createdAt: {
       type: Date,
     },
   },

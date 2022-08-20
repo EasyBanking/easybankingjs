@@ -3,10 +3,24 @@ const { point, nearestPoint, featureCollection } = require("@turf/turf");
 
 module.exports = {
   async getAll(req, res) {
+    const { geojson } = req.query;
+
     const locations = await Location.find();
 
+    if (!geojson) {
+      return res.json({
+        data: locations,
+      });
+    }
+
+    const features = locations.map((location) => {
+      return point([location.longitude, location.latitude], {
+        addresse: location.address,
+      });
+    });
+
     res.json({
-      data: locations,
+      locations: features,
     });
   },
 

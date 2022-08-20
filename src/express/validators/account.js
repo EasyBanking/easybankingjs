@@ -83,7 +83,7 @@ const Transactions = {
   }),
 };
 
-const schedules = ["teller", "customer serivce", "other"];
+const schedules = ["teller", "serivce", "other"];
 
 const createSchedule = {
   body: Joi.object({

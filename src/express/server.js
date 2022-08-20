@@ -45,7 +45,7 @@ app.use(hpp());
 app.use(
   cors({
     credentials: true,
-    origin: [process.env.ADMIN_CORS, process.env.CLIENT_ORIGIN],
+    origin: [process.env.ADMIN_ORIGIN, process.env.CLIENT_ORIGIN],
   })
 );
 

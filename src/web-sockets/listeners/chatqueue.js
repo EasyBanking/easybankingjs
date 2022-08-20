@@ -1,53 +1,142 @@
 require("events").captureRejections = true;
 const { User } = require("../../models/User");
 const { Server, Socket } = require("socket.io");
-const validate = require("../middlewares/validate");
-const validator = require("../validators/user");
 const { authenticate } = require("../middlewares/authenticate");
 const { randomBytes } = require("crypto");
+const { logger } = require("../../modules/logger");
+const { Types } = require("mongoose");
 
 /**
  * queueItem id
  * userId
  */
 
-const queue = [];
+const queueSockets = new Map();
 
+const queue = new Set([]);
+
+/**
+ * admins
+ * admin {id,username,pic}
+ * socket id
+ */
+const admins = new Set([]);
 /**
  *  room.id -> for socket room
  * room.messages = [{ userId, message }]
  * room.users = [{ userId, adminId }]
  */
-const rooms = [];
+const rooms = new Map();
 
 /**
  *
  * @param {Server} io
  */
 module.exports = async (io) => {
-  io.on("connection", (socket) => {
+  io /*.use(authenticate())*/.on("connection", (socket) => {
     //  on request chat
-    socket
-      .use(authenticate())
-      .use(validate(validator.requestQueue))
-      .on("user.requireChat", onUserRequestChat(socket));
+    socket.on("admin.online", async (admin) => {
+      admins.add(admin);
+      await socket.join("admins");
+      logger.info(`admin has logined ${socket.id} - ${admin?.username}`);
+      io.sockets.in("admins").emit("admin.logined", { admin });
+    });
+
+    socket.on("get.queue", async () => {
+      try {
+        const ids = Array.from(queue);
+        io.sockets.in("admins").emit("queue", { queue: await MapUsers(ids) });
+      } catch (err) {
+        io.sockets.in("admins").emit("queue", { queue: [] });
+      }
+    });
+
+    socket.on("user.disconnect", async ({ id }) => {
+      console.log(id, "id discconected");
+      queue.delete(id);
+      const ids = Array.from(queue);
+      io.sockets.in("admins").emit("queue", { queue: await MapUsers(ids) });
+    });
+
+    socket.on("user.require-chat", onUserRequestChat(socket));
 
     // on user join chat
-    socket
-      .use(authenticate("ADMIN"))
-      .use(validate(validator.joinChat))
-      .on("user.joinChat", onUserJoinedChat(socket));
+    socket.on("user.joinChat", async (data) => {
+      const { admin_id, user_id } = data;
+
+      const room_id = `r-${admin_id}-${user_id}`;
+
+      const extractUserSockets = Array.from(queueSockets.values());
+
+      const keys = Array.from(queueSockets.keys());
+
+      let soc = "";
+
+      for (let i = 0; i < extractUserSockets.length; i++) {
+        if (extractUserSockets[i] == user_id) {
+          soc = keys[i];
+        }
+      }
+
+      // setting the room with empty messages array
+      rooms.set(room_id, []);
+
+      await socket.join(room_id);
+
+      const mapAdmin = await MapUser(admin_id);
+
+      socket.to(soc).emit("socket.ready", { ready: true, admin: mapAdmin });
+
+      socket.emit("socket.ready", {
+        ready: true,
+        user: await MapUser(user_id),
+      });
+    });
+
+    socket.on("socket.ok", async (data) => {
+      const { admin_id, user_id } = data;
+
+      const room = `r-${admin_id}-${user_id}`;
+
+      await socket.join(room);
+
+      io.sockets.in(room).emit("session.starts", { room });
+    });
+
+    socket.on("push.message", async (data) => {
+      const { room, date, sender, content } = data;
+
+      const mapMessage = {
+        date,
+        sender: await MapUser(sender),
+        content,
+      };
+
+      const msgs = rooms?.get(room) || [];
+
+      msgs.push(mapMessage);
+
+      rooms.set(room, msgs);
+
+      console.log(rooms.get(room));
+
+      io.sockets.in(room).emit("messages", { messages: rooms.get(room) });
+    });
 
     // on user leave chat
-    socket
-      .use(validate(validator.leaveChat))
-      .on("user.leaveChat", onUserLeaveChat(socket));
+    /*socket.on("user.leaveChat", onUserLeaveChat(socket));
 
     // on message
-    socket
-      .use(authenticate())
-      .use(validate(validator.message))
-      .on("message", onMessage(socket));
+    */
+
+    socket.on("disconnect", async (r) => {
+      if (queueSockets.has(socket.id)) {
+        queue.delete(queueSockets.get(socket.id));
+        const ids = Array.from(queue);
+        queueSockets.delete(socket.id);
+        io.sockets.in("admins").emit("queue", { queue: await MapUsers(ids) });
+      }
+    });
 
     // eror handleing
     socket.on("error", onError);
@@ -60,21 +149,21 @@ module.exports = async (io) => {
    */
   function onUserRequestChat(socket) {
     return async (data) => {
-      const { userId } = data;
+      const { id } = data;
 
-      queue.push({ userId, id: randomBytes(10).toString("hex") });
+      queue.add(id);
 
-      const transformed = queue.map(async (q) => {
-        return {
-          id: q.id,
-          userId: await MapUser(q.userId),
-        };
-      });
+      const ids = Array.from(queue);
 
-      socket.emit("user.queue", {
-        queue: transformed,
-        peek: transformed[0],
-      });
+      const queueToCollection = await MapUsers(ids);
+
+      socket.emit("wait.for.accept", { peek: ids.length });
+
+      if (!queueSockets.has(socket.id)) {
+        queueSockets.set(socket.id, id);
+      }
+
+      io.sockets.in("admins").emit("queue", { queue: queueToCollection });
     };
   }
 
@@ -154,6 +243,8 @@ module.exports = async (io) => {
       rooms.splice(room, 1);
 
       await socket.leave(roomId);
+
+      socket.emit("user.leave.message", "successfully leaved a chat.");
     };
   }
 
@@ -164,7 +255,8 @@ module.exports = async (io) => {
    */
   function onError(socket) {
     return (err) => {
-      socket.emit("error", { data: err.data });
+      console.log("error", err);
+      socket.emit("error", { data: err });
     };
   }
 
@@ -175,10 +267,8 @@ module.exports = async (io) => {
    */
   async function MapUsers(users) {
     return await User.find({
-      _id: { $in: users },
-    })
-      .select(["_id", "username", "profileImg"])
-      .orFail(new Error("users not found"));
+      _id: { $in: users.map((u) => new Types.ObjectId(u)) },
+    }).select(["_id", "username", "profileImg"]);
   }
 
   /**
@@ -186,9 +276,9 @@ module.exports = async (io) => {
    * @param {string} user
    * @returns {User}
    */
-  async function MapUser(user) {
-    return await User.findOne({
-      _id: user,
+  function MapUser(user) {
+    return User.findOne({
+      _id: new Types.ObjectId(user),
     })
       .select(["_id", "username", "profileImg"])
       .orFail(new Error("user not found"));

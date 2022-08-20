@@ -1,19 +1,40 @@
 const { Location } = require("../models/Location");
-const faker = require("@ngneat/falso");
+
+const locationsDefault = [
+  {
+    address: "Zaqazyq",
+    latitude: 30.515371451296918,
+    longitude: 31.172064200162648,
+  },
+  {
+    address: "banha",
+    latitude: 30.498806913005264,
+    longitude: 31.18579711004518,
+  },
+  {
+    address: "nozha",
+    latitude: 30.120272494882062,
+    longitude: 31.353017685313553,
+  },
+  {
+    address: "west cairo",
+    latitude: 30.093296631006186,
+    longitude: 31.32842295462678,
+  },
+  {
+    address: "east cairo",
+    latitude: 30.109078411560674,
+    longitude: 31.646960185313546,
+  },
+  {
+    address: "AL-Rehab city",
+    latitude: 30.06093288886553,
+    longitude: 31.49216881600032,
+  },
+];
 
 async function seed() {
-  const len = 10;
-  const locations = [];
-
-  for (let i = 0; i < len; i++) {
-    locations.push({
-      address: faker.randAddress().street,
-      latitude: faker.randLatitude(),
-      longitude: faker.randLongitude(),
-    });
-  }
-
-  await Location.insertMany(locations);
+  await Location.insertMany(locationsDefault);
 }
 
 // just name of the seeder

@@ -6,7 +6,7 @@ const authenticate = require("../middlewares/Auth");
 // locations resource router
 
 module.exports = (router) => {
-  router.get("/location", authenticate(), controller.getAll);
+  router.get("/location", controller.getAll);
 
   router.get(
     "/location/search",
