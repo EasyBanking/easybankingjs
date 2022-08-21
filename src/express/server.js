@@ -25,7 +25,7 @@ const rateLimitConf = {
 const cookieConf = {
   httpOnly: false,
   secret: process.env["COOKIE_SECRET"],
-  sameSite: true,
+  sameSite: "none",
   path: "/",
   secure: !isDev,
   expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
@@ -56,9 +56,10 @@ if (!isDev) {
 app.use(
   csurf({
     cookie: {
+      sameSite: "none",
       maxAge: 3600,
       httpOnly: false,
-      secure: !isDev
+      secure: !isDev,
     },
   })
 );
