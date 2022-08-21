@@ -1,13 +1,9 @@
 const mongodb = require("mongoose");
 const { NotFound, BadRequest } = require("http-errors");
 const { User } = require("../../models/User");
-const notficationEmitter = require("../../helpers/NotficationBuilder");
 const { Account } = require("../../models/Account");
-const { Schedule } = require("../../models/Schedule");
 const counterEmitter = require("../../jobs/counter");
-const { events } = require("../../helpers/constants");
 const { Payment, PaymentStatus } = require("../../models/Payment");
-const { once } = require("events");
 const {
   Transaction,
   TransactionsType,
@@ -212,14 +208,8 @@ module.exports = {
 
       await trans.commitTransaction();
 
-      notficationEmitter.emit(events.TRANSFER_MONEY_NOTFICATION, {
-        user: sender,
-        amount,
-      });
-
-      notficationEmitter.emit(events.RECEIVE_MONEY_NOTFICATION, {
-        user: receiver,
-        amount,
+      res.json({
+        message: "successfully transfered money",
       });
     } catch (err) {
       await trans.abortTransaction();
@@ -228,9 +218,6 @@ module.exports = {
     } finally {
       await trans.endSession();
     }
-    res.json({
-      message: "successfully transfered money",
-    });
   },
 
   async accountSearch(req, res) {
@@ -338,10 +325,6 @@ module.exports = {
 
       await trans.commitTransaction();
 
-      notficationEmitter.emit(events.INSTANT_PAY_GENERATION_NOTFICATION, {
-        user: req.user.account,
-        amount,
-      });
 
       res.json({ token, expireAt: instantPay.expireAt, id: instantPay._id });
     } catch (err) {
@@ -425,11 +408,6 @@ module.exports = {
       payment.status = PaymentStatus.APPROVED;
       payment.receivedAt = new Date();
       await payment.save();
-
-      notficationEmitter.emit(events.INSTANT_PAY_RECEVEING_NOTFICATION, {
-        user: receiverAccount,
-        amount: payment.amount,
-      });
 
       await trans.commitTransaction();
 
