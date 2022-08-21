@@ -259,9 +259,9 @@ module.exports = {
     session.startTransaction();
 
     try {
-      const account = await Account.findOne({ id: req.user.account }).orFail(
-        new NotFound("account not found to update !")
-      );
+      const account = await Account.findOne({
+        _id: objectId(req.user.account._id),
+      }).orFail(new NotFound("account not found to update !"));
 
       if (!compareSync(atmPin, account.atmPin)) {
         account.atmPin = hashSync(atmPin);
