@@ -9,7 +9,7 @@ const http = require("http");
 const { wrapSocketIo } = require("./web-sockets/io");
 const mongodb = require("./modules/mongodb");
 const express = require("./express/server");
-const redis = require("./modules/redis");
+//const redis = require("./modules/redis");
 const { logger } = require("./modules/logger");
 
 async function main() {
@@ -23,7 +23,6 @@ async function main() {
   srv.listen(4000, () => {
     logger.info(`Server is running on port ${4000}`);
     console.log("connection successful");
-
   });
 }
 

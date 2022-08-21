@@ -4,21 +4,19 @@ const controller = require("../controllers/transaction");
 // locations resource router
 
 module.exports = (router) => {
+  router.get("/transactions", controller.allowOrigin, controller.getAll);
+  console.log("the request is in the transaction routes");
 
-  router.get("/transactions",controller.allowOrigin, controller.getAll);
-   console.log("the request is in the transaction routes");
+  //get transaction by id
+  router.get(
+    "/transactions/:id",
+    controller.allowOrigin,
+    controller.getTransactionByID
+  );
 
-   //get transaction by id
-    router.get("/transactions/:id",controller.allowOrigin, controller.getTransactionByID);
-  }
-
-
-
-
-
-//   router.get(
-//     "/location/search",
-//     authenticate(),
-//     celebrate(validator.search),
-//     controller.search
-//   );
+  router.get(
+    "/transaction/stats/:id",
+    controller.allowOrigin,
+    controller.stats
+  );
+};
