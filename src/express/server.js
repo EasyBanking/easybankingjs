@@ -56,7 +56,7 @@ if (!isDev) {
 app.use(
   csurf({
     cookie: {
-      sameSite: true,
+      sameSite: "lax",
       maxAge: 3600,
       httpOnly: false,
     },
