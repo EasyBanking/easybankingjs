@@ -77,4 +77,5 @@ module.exports = (router) => {
     celebrate(AccountValidator.objectId),
     UsersController.delete_admin
   );
+
 };

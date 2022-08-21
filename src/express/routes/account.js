@@ -75,4 +75,6 @@ module.exports = (router) => {
     celebrate(validator.deleteSchedule),
     controller.deleteSchedule
   );
+
+  router.get("/account/stats", authenticate(), controller.stats);
 };

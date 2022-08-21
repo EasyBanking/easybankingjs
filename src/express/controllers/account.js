@@ -15,6 +15,77 @@ const { compareSync, hashSync } = require("bcryptjs");
 const { logger } = require("../../modules/logger");
 
 module.exports = {
+  async stats(req, res) {
+    const id = req.user.account._id;
+
+    try {
+      //get the most recevier from the user with id
+      const top_3_Receivers = await Transaction.aggregate([
+        {
+          $match: { sender: id },
+        },
+        {
+          $group: { _id: "$receiver", count: { $sum: 1 } },
+        },
+        {
+          $sort: { count: -1 },
+        },
+        {
+          $lookup: {
+            from: "accounts",
+            localField: "_id",
+            foreignField: "_id",
+            as: "account",
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            count: 1,
+            "account.firstName": 1,
+            "account.lastName": 1,
+          },
+        },
+      ]).limit(3);
+
+      const top_3_Senders = await Transaction.aggregate([
+        {
+          $match: { receiver: mongodb.Types.ObjectId(id) },
+        },
+        {
+          $group: { _id: "$sender", count: { $sum: 1 } },
+        },
+        {
+          $sort: { count: -1 },
+        },
+        {
+          $lookup: {
+            from: "accounts",
+            localField: "_id",
+            foreignField: "_id",
+            as: "account",
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            count: 1,
+            "account.firstName": 1,
+            "account.lastName": 1,
+          },
+        },
+      ]).limit(3);
+
+      res.status(200).json({
+        "TOP Senders": top_3_Senders,
+        "TOP Receivers": top_3_Receivers,
+      });
+      
+    } catch (err) {
+      res.status(500).json(err);
+    }
+  },
+
   async deleteSchedule(req, res) {
     const { location_id, timestamp, schedule_id } = req.body;
 
@@ -324,7 +395,6 @@ module.exports = {
       ).orFail(new NotFound());
 
       await trans.commitTransaction();
-
 
       res.json({ token, expireAt: instantPay.expireAt, id: instantPay._id });
     } catch (err) {
