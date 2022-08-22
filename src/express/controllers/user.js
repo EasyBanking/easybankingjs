@@ -30,11 +30,9 @@ module.exports = {
     try {
       // if username or email existed
       const isExist = await FilterUser({ username, email });
-      console.log(existMsg);
 
       if (isExist) {
         let existMsg = " is exist try another one";
-        console.log(existMsg);
 
         throw new BadRequest(
           `${
