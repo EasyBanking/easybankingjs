@@ -80,7 +80,6 @@ module.exports = {
         "TOP Senders": top_3_Senders,
         "TOP Receivers": top_3_Receivers,
       });
-      
     } catch (err) {
       res.status(500).json(err);
     }
@@ -539,7 +538,7 @@ module.exports = {
         _id: objectId(id),
       });
 
-      if (!compareSync(atmPin, updated.atmPin)) {
+      if (atmPin && !compareSync(atmPin, updated.atmPin)) {
         updated.atmPin = atmPin;
       }
 
@@ -549,7 +548,9 @@ module.exports = {
       updated.addresse = addresse;
       updated.nationalId = nationalId;
       updated.status = status;
-      updated.balance = balance;
+      if (updated?.balance) {
+        updated.balance = balance;
+      }
 
       await updated.save();
 

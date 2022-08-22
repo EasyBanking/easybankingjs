@@ -54,4 +54,44 @@ module.exports = {
       data: nearest,
     });
   },
+
+  async create(req, res) {
+    const { latitude, longitude, address } = req.body;
+
+    res.json({
+      location: await Location.create({
+        address,
+        latitude,
+        longitude,
+      }),
+    });
+  },
+
+  async find(req, res) {
+    const { id } = req.params;
+
+    res.json({
+      location: await Location.findById(id),
+    });
+  },
+
+  async update(req, res) {
+    const { id } = req.params;
+    const { address, latitude, longitude } = req.body;
+    res.json({
+      location: await Location.findByIdAndUpdate(id, {
+        address,
+        latitude,
+        longitude,
+      }),
+    });
+  },
+
+  async delete(req, res) {
+    const { id } = req.params;
+
+    res.json({
+      location: await Location.findByIdAndDelete(id),
+    });
+  },
 };

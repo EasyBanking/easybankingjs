@@ -8,14 +8,21 @@ const mongo = require("../modules/mongodb");
 
 // seeders
 const LoctionSeeder = require("./location");
-const UsersSeeder = require("./user");
+const userSeeder = require("./user");
+const paymentsSeeder = require("./Payements");
+const transactionSeeder = require("./Transactions");
+const urgentSeeder = require("./Urgent");
 
 // seeders array here
-const seeders = [LoctionSeeder, UsersSeeder];
-
+const seeders = [
+  LoctionSeeder,
+  userSeeder,
+  paymentsSeeder,
+  urgentSeeder,
+  transactionSeeder,
+];
 
 async function main() {
-
   const con = await mongo();
 
   for (let seeder of seeders) {

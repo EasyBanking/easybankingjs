@@ -1,6 +1,7 @@
 const AccountController = require("../controllers/account");
 const NotficationsController = require("../controllers/notfications");
 const UsersController = require("../controllers/user");
+const UrgentsController = require("../controllers/urgents");
 const AccountValidator = require("../validators/account");
 const UserValidator = require("../validators/user");
 const { celebrate } = require("celebrate");
@@ -55,7 +56,7 @@ module.exports = (router) => {
   // users area
 
   router.get("/admin/users", authenticate("ADMIN"), UsersController.getAll);
-  
+
   router.get(
     "/admin/users/:id",
     authenticate("ADMIN"),
@@ -78,4 +79,25 @@ module.exports = (router) => {
     UsersController.delete_admin
   );
 
+  router.get("/admin/urgents", authenticate("ADMIN"), UrgentsController.getAll);
+  router.get(
+    "/admin/urgents/:id",
+    authenticate("ADMIN"),
+    UrgentsController.find
+  );
+  router.post(
+    "/admin/urgents/:id",
+    authenticate("ADMIN"),
+    UrgentsController.create
+  );
+  router.patch(
+    "/admin/urgents/:id",
+    authenticate("ADMIN"),
+    UrgentsController.update
+  );
+  router.delete(
+    "/admin/urgents/:id",
+    authenticate("ADMIN"),
+    UrgentsController.delete
+  );
 };

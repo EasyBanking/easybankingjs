@@ -447,8 +447,9 @@ module.exports = {
         throw BadRequest(`${msg} is exist try another one`);
       }
 
+
       usr.username = username;
-      usr.email = usr.email;
+      usr.email = email;
       usr.security.question = question;
       usr.security.answer = answear;
       usr.isAcitive = isAcitive;

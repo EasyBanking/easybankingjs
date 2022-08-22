@@ -70,7 +70,7 @@ const update_admin = {
   body: Joi.object({
     username: Joi.string().min(5).max(55).required(),
     email: Joi.string().min(5).max(55).required(),
-    password: Joi.string().min(5).max(55),
+    password: Joi.string().allow("").min(5).max(55),
     question: Joi.string().min(5).max(255).required(),
     answear: Joi.string().min(2).max(255).required(),
     isAcitive: Joi.boolean().required(),

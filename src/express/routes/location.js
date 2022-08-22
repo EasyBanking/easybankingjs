@@ -21,4 +21,12 @@ module.exports = (router) => {
     celebrate(validator.findNearest),
     controller.findNearest
   );
+
+  router.post("/admin/location", authenticate("ADMIN"), controller.create);
+  router.get("/admin/location/:id", authenticate("ADMIN"), controller.find);
+  router.patch("/admin/location/:id", authenticate("ADMIN"), controller.update);
+  router.delete("/admin/location/:id", authenticate("ADMIN"), controller.delete);
+
+
+  
 };

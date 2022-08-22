@@ -63,13 +63,13 @@ const objectId = {
 
 const update_admin = {
   body: Joi.object({
-    atmPin: Joi.string().length(4).required(),
+    atmPin: Joi.string().allow("").length(4),
     firstName: Joi.string().min(2).max(55).required(),
     lastName: Joi.string().min(2).max(55).required(),
     nationalId: Joi.string().min(2).max(55).required(),
     dateOfBirth: Joi.string().min(2).max(55).required(),
     addresse: Joi.string().min(2).max(55).required(),
-    balance: Joi.number().required(),
+    balance: Joi.number().allow(""),
     status: Joi.string(),
   }),
   params: Joi.object({

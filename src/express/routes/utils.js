@@ -17,4 +17,5 @@ module.exports = (router) => {
   router.get("/health-check", controller.healthCheck);
   router.get("/locations", authenticate(), controller.getLocations);
   router.post("/contact", celebrate(createContact), controller.createContact);
+  router.get("/counters", authenticate("ADMIN"), controller.counts);
 };
