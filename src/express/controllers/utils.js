@@ -36,7 +36,7 @@ module.exports = {
     await Contact.create({ message, email, subject });
 
     res.json({
-      message: "sucessfully contact recived!",
+      message: "thanks for reaching out!",
     });
   },
   getQuestions(req, res) {

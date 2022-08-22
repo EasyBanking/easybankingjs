@@ -29,4 +29,33 @@ module.exports = {
       res.status(500).json(err);
     }
   },
+
+  async createContact(req, res) {
+    const { message, subject, email } = req.body;
+
+    await Contact.create({
+      message,
+      subject,
+      email,
+    });
+
+    res.json({
+      message: "succesfully received a contact message",
+    });
+  },
+
+  async updateContact(req, res) {
+    const { message, subject, email } = req.body;
+    const { id } = req.params;
+
+    await Contact.findByIdAndUpdate(id, {
+      message,
+      subject,
+      email,
+    });
+
+    res.json({
+      message: "succesfully received a contact message",
+    });
+  },
 };
