@@ -16,7 +16,7 @@ const { logger } = require("../../modules/logger");
 
 module.exports = {
   async stats(req, res) {
-    const id = req.user.account._id;
+    const id = req?.user?.account?._id;
 
     try {
       //get the most recevier from the user with id
@@ -150,15 +150,15 @@ module.exports = {
         const mapped = [];
 
         for (let i = 0; i < docs.length; i++) {
-          const usr = await docs[i].sender.user;
+          const usr = await docs[i]?.sender.user;
           const usr2 = await docs[i]?.receiver?.user;
           mapped[i] = {
             ...docs[i].toObject(),
             sender: {
               ...docs[i].sender.toObject(),
               user: {
-                username: usr.username,
-                profile_img: usr.profileImg,
+                username: usr?.username,
+                profile_img: usr?.profileImg,
               },
             },
             receiver: {

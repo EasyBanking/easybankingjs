@@ -12,6 +12,7 @@ const userSeeder = require("./user");
 const paymentsSeeder = require("./Payements");
 const transactionSeeder = require("./Transactions");
 const urgentSeeder = require("./Urgent");
+const scheduleSeeder = require("./Schedule");
 
 // seeders array here
 const seeders = [
@@ -20,6 +21,7 @@ const seeders = [
   paymentsSeeder,
   urgentSeeder,
   transactionSeeder,
+  scheduleSeeder
 ];
 
 async function main() {

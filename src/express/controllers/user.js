@@ -332,7 +332,7 @@ module.exports = {
     session.startTransaction();
 
     try {
-      const usr = await User.findOne({ _id: req.user._id }).orFail(
+      const usr = await User.findOne({ _id: objectId(req.user._id) }).orFail(
         new NotFound()
       );
 
@@ -362,7 +362,7 @@ module.exports = {
     session.startTransaction();
 
     try {
-      const usr = await User.findOne({ _id: req.user._id }).orFail(
+      const usr = await User.findOne({ _id: objectId(req.user._id) }).orFail(
         new NotFound()
       );
 
@@ -444,7 +444,6 @@ module.exports = {
         const msg = isExist.username === username ? "username" : "email";
         throw BadRequest(`${msg} is exist try another one`);
       }
-
 
       usr.username = username;
       usr.email = email;
